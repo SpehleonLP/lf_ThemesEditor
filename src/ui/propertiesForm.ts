@@ -1,8 +1,19 @@
-import { writeFileBytes } from '../api';
+import Ajv from 'ajv';
+import { writeFileBytes, readFileText } from '../api';
 import { applyLayerToEntry, serializeDocument } from '../document';
 import { state, notify } from './state';
 
 const FILLS = ['STRETCH', 'TILE', 'SNAP', 'FLEXIBLE', 'CENTER'];
+
+let validator: ((d: unknown) => boolean) & { errors?: any } | null = null;
+async function validateDoc(root: unknown): Promise<string[]> {
+  if (!validator) {
+    const schema = JSON.parse(await readFileText('schemas/borders.schema.json'));
+    validator = new Ajv({ strict: false }).compile(schema) as any;
+  }
+  validator!(root);
+  return (validator as any).errors?.map((e: any) => `${e.instancePath} ${e.message}`) ?? [];
+}
 
 function vec4Inputs(id: string, v: number[] | undefined, def: number[]): string {
   const vals = v ?? def;
@@ -35,7 +46,7 @@ export function renderPropertiesForm(host: HTMLElement): void {
           <input type="number" data-edge="Style.MinSize" data-i="1" value="${entry.Style?.MinSize?.[1] ?? 0}" style="width:60px"></label>
       </fieldset>
       <button id="save" ${state.dirty ? '' : 'disabled'}>Save borders.json</button>
-      <div id="save-status"></div>
+      <div id="save-status">${state.saveStatus ?? ''}</div>
     </div>`;
 
   host.querySelectorAll<HTMLSelectElement>('select[data-fill]').forEach((s) => {
@@ -69,9 +80,18 @@ export function renderPropertiesForm(host: HTMLElement): void {
     };
     applyLayerToEntry(entry, 'Mask', editFor('Mask'));
     applyLayerToEntry(entry, 'Overlay', editFor('Overlay'));
+    let errors: string[] = [];
+    try { errors = await validateDoc(state.doc!.root); }
+    catch (e) { console.warn('schema validation failed to run:', e); }
     await writeFileBytes('borders.json', serializeDocument(state.doc!));
     state.dirty = false;
-    (host.querySelector('#save-status') as HTMLElement).textContent = `saved ${new Date().toLocaleTimeString()}`;
+    const savedLine = `saved ${new Date().toLocaleTimeString()}`;
+    if (errors.length) {
+      const list = errors.map((m) => `<div>${m.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))}</div>`).join('');
+      state.saveStatus = `${savedLine}<div style="color:#c00">${errors.length} schema issue(s):${list}</div>`;
+    } else {
+      state.saveStatus = `${savedLine} <span style="color:#0a0">✓ schema valid</span>`;
+    }
     notify();
   };
 }

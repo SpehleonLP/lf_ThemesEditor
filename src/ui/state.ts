@@ -19,6 +19,7 @@ export interface AppState {
   linked: boolean;                    // edit both layers at once
   selectedCell: [number, number] | null; // [y][x]
   dirty: boolean;
+  saveStatus: string | null;          // HTML for #save-status, survives re-render
 }
 
 type Listener = () => void;
@@ -26,7 +27,7 @@ const listeners: Listener[] = [];
 
 export const state: AppState = {
   doc: null, selected: null, layers: null,
-  activeLayer: 'overlay', linked: false, selectedCell: null, dirty: false,
+  activeLayer: 'overlay', linked: false, selectedCell: null, dirty: false, saveStatus: null,
 };
 
 export function subscribe(fn: Listener): void { listeners.push(fn); }
