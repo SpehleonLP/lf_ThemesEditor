@@ -1,4 +1,4 @@
-import type { Vec4 } from './types';
+import type { Vec2, Vec4 } from './types';
 
 export interface BandLayout {
   positionsX: number[]; // 6 entries, 0..1 panel space
@@ -20,7 +20,9 @@ function fix(p: number[], cLow: number, cHigh: number): void {
 }
 
 // Port of gui_panel.tese main() :99-148 (border_flags mirror handling intentionally omitted).
-export function computeBands(tessellation: Vec4, centerTile: Vec4, sizePt: [number, number]): BandLayout {
+export function computeBands(tessellation: Vec4, centerTile: Vec4, sizePt: Vec2): BandLayout {
+  if (!(sizePt[0] > 0) || !(sizePt[1] > 0))
+    throw new Error(`computeBands: panel size must be positive, got [${sizePt[0]}, ${sizePt[1]}]`);
   const m = tessellation; // [left, top, right, bottom]
   let left = m[0], top = m[1], right = m[2], bottom = m[3];
   if (m[2] > 1.0) { left /= sizePt[0]; right /= sizePt[0]; }
