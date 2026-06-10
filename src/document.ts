@@ -1,3 +1,6 @@
+import { serializeCells } from './cells';
+import type { CellGrid } from './types';
+
 export interface BordersDoc {
   root: Record<string, any>;
   names: string[];
@@ -23,4 +26,17 @@ export function getEditorMeta(entry: any): any | undefined {
 
 export function setEditorMeta(entry: any, meta: any): void {
   entry.Editor = meta;
+}
+
+export interface LayerEdit {
+  cells: CellGrid | null; // null = leave as #COPY
+  edgeFill: [string, string];
+  centerFill: [string, string];
+}
+
+export function applyLayerToEntry(entry: any, key: 'Mask' | 'Overlay', edit: LayerEdit): void {
+  if (entry[key] == null || typeof entry[key] === 'string') return; // absent / Mask:"#OVERLAY" — nothing to write
+  if (edit.cells) entry[key].Cells = serializeCells(edit.cells);
+  entry[key].EdgeFill = edit.edgeFill;
+  entry[key].CenterFill = edit.centerFill;
 }
