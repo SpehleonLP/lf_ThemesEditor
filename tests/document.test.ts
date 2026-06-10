@@ -17,10 +17,10 @@ test('second save is byte-identical (stable formatting)', async () => {
   expect(serializeDocument(parseDocument(once))).toBe(once);
 });
 
-test('entry order is preserved', async () => {
+test('entry order is preserved through serialize', async () => {
   const text = await fixture();
   const doc = parseDocument(text);
-  expect(doc.names).toEqual(Object.keys(JSON.parse(text)));
+  expect(Object.keys(JSON.parse(serializeDocument(doc)))).toEqual(doc.names);
 });
 
 test('border name validation mirrors the enum patterns', () => {

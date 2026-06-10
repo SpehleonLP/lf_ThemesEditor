@@ -16,5 +16,5 @@ export async function writeFileBytes(path: string, data: Uint8Array | string): P
 export async function listDir(dir: string): Promise<{ name: string; dir: boolean }[]> {
   const r = await fetch(`/api/list?dir=${encodeURIComponent(dir)}`);
   if (!r.ok) throw new Error(`list ${dir}: ${r.status}`);
-  return r.json();
+  return await r.json();
 }
