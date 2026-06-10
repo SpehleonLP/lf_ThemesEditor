@@ -59,6 +59,18 @@ preview consumer makes the cost real:
   Locations are stable post-link; cache them at construction when optimizing the render loop. Pairs
   with the M5 fix.
 
+## MaxRects packer (Task 12) — note for Task 13/14 consumer
+
+- **Trailing-edge-only gutter leaves right/bottom-edge sprites with no outer margin.** The packer
+  pads each piece's footprint by `roundUp(w+gutter, align)` on its TRAILING edges only; the canvas
+  edge acts as the outer gutter on leading sides. This guarantees a full `gutter` separation between
+  any two *interior* pieces, but a sprite flush against the right or bottom canvas edge gets zero
+  trailing margin. For atlas packing where every sprite needs a gutter on all four sides to prevent
+  bilinear/mip bleed, the **Task 13/14 consumer must reserve edge gutter** — pack into
+  `(canvasW - gutter) × (canvasH - gutter)`, or pad all sides and accept the packing-efficiency cost.
+  The packer API itself is correct (20k-case stress: all placements aligned, in-bounds, non-overlapping
+  padded footprints); this is a consumer-side decision, not a packer bug.
+
 ## Deferred view-fit (Task 7 minor)
 
 - Module-level `view` (zoom/pan) is not reset/fit when switching borders; a differently-sized border

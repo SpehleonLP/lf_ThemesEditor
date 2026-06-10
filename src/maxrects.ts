@@ -10,6 +10,9 @@ export function packRects(
   canvasH: number,
   opts: { gutter: number; align: number },
 ): Placed[] | null {
+  // align must be >= 1: roundUp(v, 0) = Infinity*0 = NaN, which silently poisons
+  // every fit test and placement (NaN < x is false → degenerate "placed" rects).
+  if (!(opts.align >= 1)) throw new Error(`packRects: align must be >= 1, got ${opts.align}`);
   // pad: gutter + alignment; canvas itself acts as the outer gutter on two sides,
   // so pad trailing edges only (piece at x..x+w, occupies x..x+padW)
   const padded = pieces.map((p) => ({
@@ -44,7 +47,9 @@ export function packRects(
       if (node.y > fr.y) next.push({ x: fr.x, y: fr.y, w: fr.w, h: node.y - fr.y });
       if (node.y + node.h < fr.y + fr.h) next.push({ x: fr.x, y: node.y + node.h, w: fr.w, h: fr.y + fr.h - node.y - node.h });
     }
-    // prune contained rects
+    // prune contained rects. Tie-break: drop `a` iff `b` strictly contains it, OR `b`
+    // is an equal rect with a lower index — so exact duplicates keep exactly one copy
+    // (without the j<i clause, two identical rects each "contain" the other and BOTH die).
     free = next.filter((a, i) => !next.some((b, j) =>
       j !== i && b.x <= a.x && b.y <= a.y && b.x + b.w >= a.x + a.w && b.y + b.h >= a.y + a.h
       && (j < i || b.x !== a.x || b.y !== a.y || b.w !== a.w || b.h !== a.h)));
