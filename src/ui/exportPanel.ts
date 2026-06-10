@@ -15,8 +15,10 @@ export function renderExportPanel(host: HTMLElement): void {
     </div>`;
   (host.querySelector('#pk-go') as HTMLButtonElement).onclick = async () => {
     const status = host.querySelector('#pk-status') as HTMLElement;
+    let wroteSheets = false;
     try {
-      const gutter = Number((host.querySelector('#pk-gutter') as HTMLInputElement).value);
+      const raw = Number((host.querySelector('#pk-gutter') as HTMLInputElement).value);
+      const gutter = Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 8;
       const L = state.layers!;
       const inputs: PackLayerInput[] = [];
       if (L.overlay.image && L.overlay.cells) inputs.push({ name: 'overlay', source: L.overlay.image, cells: L.overlay.cells });
@@ -29,6 +31,7 @@ export function renderExportPanel(host: HTMLElement): void {
         await writeFileBytes(p, encodePng(sheet));
         paths[sheet.name] = p;
       }
+      wroteSheets = true;
       const entry = state.doc!.root[state.selected!];
       applyPackResult(entry, {
         overlayImage: paths['overlay'] ?? null,
@@ -45,7 +48,7 @@ export function renderExportPanel(host: HTMLElement): void {
       status.textContent = `packed → ${Object.values(paths).join(', ')}`;
       notify();
     } catch (e) {
-      status.textContent = String(e);
+      status.textContent = (wroteSheets ? 'sheets written but export failed: ' : '') + String(e);
     }
   };
 }

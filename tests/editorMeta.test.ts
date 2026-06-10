@@ -23,4 +23,9 @@ test('applyPackResult writes images, 25-rect cells, #COPY for linked mask, and E
   expect(entry.Mask.Cells).toBe('#COPY');
   expect(entry.Editor.version).toBe(1);
   expect(entry.Editor.sourceCells).toHaveLength(25);
+
+  // Fix 1 regression guard: the snapshot must be decoupled from the live rect arrays.
+  const before = entry.Editor.sourceCells[0].rect[0];
+  packed[0][0].rect[0] = before + 999;
+  expect(entry.Editor.sourceCells[0].rect[0]).toBe(before);
 });

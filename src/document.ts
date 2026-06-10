@@ -1,5 +1,5 @@
 import { serializeCells } from './cells';
-import type { CellGrid, EditorCell } from './types';
+import type { CellGrid, EditorCell, Vec4 } from './types';
 
 export interface BordersDoc {
   root: Record<string, any>;
@@ -52,7 +52,7 @@ export interface PackApply {
   pack: { gutter: number; align: number };
 }
 
-const flat = (g: CellGrid): EditorCell[] => g.flat().map((c) => ({ rect: c.rect, mirrorX: c.mirrorX, mirrorY: c.mirrorY }));
+const flat = (g: CellGrid): EditorCell[] => g.flat().map((c) => ({ rect: [...c.rect] as Vec4, mirrorX: c.mirrorX, mirrorY: c.mirrorY }));
 
 export function applyPackResult(entry: any, r: PackApply): void {
   if (r.overlayImage && r.overlayCells) {
