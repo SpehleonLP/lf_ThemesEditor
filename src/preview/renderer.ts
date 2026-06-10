@@ -25,7 +25,11 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLSh
   const s = gl.createShader(type)!;
   gl.shaderSource(s, src);
   gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) ?? 'shader compile failed');
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(s) ?? 'shader compile failed';
+    gl.deleteShader(s);
+    throw new Error(log);
+  }
   return s;
 }
 
@@ -53,17 +57,40 @@ export class PreviewRenderer {
   private overlayTex: WebGLTexture;
 
   constructor(private canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true })!;
+    const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true });
+    if (!gl) throw new Error('WebGL2 is not available in this browser');
     this.gl = gl;
     this.prog = gl.createProgram()!;
-    gl.attachShader(this.prog, compile(gl, gl.VERTEX_SHADER, VERT));
-    gl.attachShader(this.prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
+    const vs = compile(gl, gl.VERTEX_SHADER, VERT);
+    const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
+    gl.attachShader(this.prog, vs);
+    gl.attachShader(this.prog, fs);
     gl.linkProgram(this.prog);
-    if (!gl.getProgramParameter(this.prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(this.prog) ?? 'link failed');
+    if (!gl.getProgramParameter(this.prog, gl.LINK_STATUS)) {
+      const log = gl.getProgramInfoLog(this.prog) ?? 'link failed';
+      gl.deleteProgram(this.prog);
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      throw new Error(log);
+    }
+    // Program keeps its own linked copy; detach + delete the shader objects.
+    gl.detachShader(this.prog, vs);
+    gl.detachShader(this.prog, fs);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
     this.vao = gl.createVertexArray()!;
     this.bufs = [gl.createBuffer()!, gl.createBuffer()!, gl.createBuffer()!, gl.createBuffer()!];
     this.maskTex = this.makeTex();
     this.overlayTex = this.makeTex();
+  }
+
+  dispose(): void {
+    const gl = this.gl;
+    gl.deleteProgram(this.prog);
+    for (const b of this.bufs) gl.deleteBuffer(b);
+    gl.deleteTexture(this.maskTex);
+    gl.deleteTexture(this.overlayTex);
+    gl.deleteVertexArray(this.vao);
   }
 
   private makeTex(): WebGLTexture {
