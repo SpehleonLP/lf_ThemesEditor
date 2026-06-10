@@ -117,7 +117,10 @@ export function isInPixels(grid: Vec4[][]): boolean {
 
 export function normalizeCells(gridIn: Vec4[][], size: [number, number]): Vec4[][] {
   const grid = gridIn.map((row) => row.map((r) => r.slice() as Vec4));
-  const denom: Vec4 = [1 / size[0], 1 / size[1], 1 / size[0], 1 / size[1]];
+  const denom: Vec4 = [
+    Math.fround(1 / size[0]), Math.fround(1 / size[1]),
+    Math.fround(1 / size[0]), Math.fround(1 / size[1]),
+  ];
 
   if (!isInPixels(grid)) {
     for (const row of grid)
@@ -128,7 +131,7 @@ export function normalizeCells(gridIn: Vec4[][], size: [number, number]): Vec4[]
     for (const row of grid)
       for (const r of row) {
         const p = r.slice() as Vec4;
-        for (let i = 0; i < 4; ++i) r[i] = p[i] * denom[i];
+        for (let i = 0; i < 4; ++i) r[i] = Math.fround(p[i] * denom[i]);
         for (let i = 0; i < 4; ++i) {
           if (p[i] === Infinity) r[i] = 1.0;
           if (p[i] === 1.0) r[i] -= denom[i] / 2; // a 1-PIXEL coordinate, not normalized 1.0
@@ -136,13 +139,15 @@ export function normalizeCells(gridIn: Vec4[][], size: [number, number]): Vec4[]
       }
   }
 
-  // denom *= 0.5; inset exact edges by half a texel
+  // half-texel inset of exact edges (engine: denom *= 0.5 then cell ∓= denom[i]; here in float32)
   for (const row of grid)
-    for (const r of row)
+    for (const r of row) {
       for (let i = 0; i < 4; ++i) {
-        if (r[i] === 1.0) r[i] -= denom[i] * 0.5;
-        if (r[i] === 0.0) r[i] += denom[i] * 0.5;
+        const half = Math.fround(denom[i] * 0.5);
+        if (r[i] === 1.0) r[i] = Math.fround(r[i] - half);
+        if (r[i] === 0.0) r[i] = Math.fround(r[i] + half);
       }
+    }
   return grid;
 }
 
