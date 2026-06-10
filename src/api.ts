@@ -9,7 +9,7 @@ export async function readFileText(path: string): Promise<string> {
 }
 
 export async function writeFileBytes(path: string, data: Uint8Array | string): Promise<void> {
-  const r = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'PUT', body: data });
+  const r = await fetch(`/api/file?path=${encodeURIComponent(path)}`, { method: 'PUT', body: data as BodyInit });
   if (!r.ok) throw new Error(`write ${path}: ${r.status} ${await r.text()}`);
 }
 

@@ -27,8 +27,10 @@ async function loadLayer(entry: any, key: 'Mask' | 'Overlay'): Promise<LayerStat
 export async function selectBorder(name: string): Promise<void> {
   if (!state.doc) return;
   const entry = state.doc.root[name];
-  const mask = await loadLayer(entry, 'Mask');
-  const overlay = await loadLayer(entry, 'Overlay');
+  const [mask, overlay] = await Promise.all([
+    loadLayer(entry, 'Mask'),
+    loadLayer(entry, 'Overlay'),
+  ]);
   // #COPY resolution: a null grid copies the other layer's (cpp:857-870 NaN merge)
   if (!mask.cells && overlay.cells) mask.cells = structuredClone(overlay.cells);
   if (!overlay.cells && mask.cells) overlay.cells = structuredClone(mask.cells);
