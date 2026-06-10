@@ -73,6 +73,18 @@ export function defaultCellsForImage(size: [number, number]): CellGrid {
   return toEditorGrid(resolveInfinity(parsed.grid, size));
 }
 
+// Visual 9-patch: two cut lines per axis. Routed through the engine's 4-cut form
+// ([y0,x0,y1,x1]) so the editor preview matches exactly what the engine would build.
+export function ninePatchGrid(
+  xCuts: [number, number],
+  yCuts: [number, number],
+  imageSize: [number, number],
+): CellGrid {
+  const parsed = parseCellsJson([yCuts[0], xCuts[0], yCuts[1], xCuts[1]]); // 4-cut form is [y0,x0,y1,x1]
+  if (parsed.kind !== 'grid') throw new Error('ninePatchGrid: expected a grid');
+  return toEditorGrid(resolveInfinity(parsed.grid, imageSize));
+}
+
 export function toEditorGrid(grid: Grid): CellGrid {
   return grid.map((row) => row.map((r): EditorCell => ({
     rect: [Math.abs(r[0]), Math.abs(r[1]), Math.abs(r[2]), Math.abs(r[3])],

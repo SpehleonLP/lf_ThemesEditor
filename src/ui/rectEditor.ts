@@ -1,10 +1,14 @@
 import { state, notify, type LayerName } from './state';
+import { ninePatchGrid } from '../cells';
 import type { EditorCell } from '../types';
 
 const HANDLE = 6; // px, screen-space
 
 interface View { zoom: number; ox: number; oy: number; }
 const view: View = { zoom: 1, ox: 20, oy: 20 };
+
+// null = normal rect mode; non-null = 9-patch quick mode (two draggable cut lines per axis).
+let ninePatch: { xCuts: [number, number]; yCuts: [number, number] } | null = null;
 
 let imageCanvas: HTMLCanvasElement | null = null;
 let imageFor: string | null = null;
@@ -25,7 +29,11 @@ function ensureImageCanvas(): HTMLCanvasElement | null {
 const toScreen = (x: number, y: number): [number, number] => [x * view.zoom + view.ox, y * view.zoom + view.oy];
 const toImage = (sx: number, sy: number): [number, number] => [(sx - view.ox) / view.zoom, (sy - view.oy) / view.zoom];
 
-type DragMode = { kind: 'pan' } | { kind: 'move' } | { kind: 'handle'; hx: 0 | 1 | -1; hy: 0 | 1 | -1 };
+type DragMode =
+  | { kind: 'pan' }
+  | { kind: 'move' }
+  | { kind: 'handle'; hx: 0 | 1 | -1; hy: 0 | 1 | -1 }
+  | { kind: 'cut'; axis: 'x' | 'y'; index: 0 | 1 };
 let drag: { mode: DragMode; lastX: number; lastY: number } | null = null;
 
 function cellAt(ix: number, iy: number): [number, number] | null {
@@ -78,6 +86,68 @@ function applyDrag(dxImg: number, dyImg: number, mode: DragMode): void {
   state.dirty = true;
 }
 
+function activeImage(): { width: number; height: number } | null {
+  return state.layers?.[state.activeLayer]?.image ?? null;
+}
+
+// Initialize cut lines to image thirds and enter 9-patch mode.
+function enterNinePatch(): void {
+  const img = activeImage();
+  if (!img) return; // no-op when no image loaded
+  ninePatch = {
+    xCuts: [Math.round(img.width / 3), Math.round((2 * img.width) / 3)],
+    yCuts: [Math.round(img.height / 3), Math.round((2 * img.height) / 3)],
+  };
+  notify();
+}
+
+function cancelNinePatch(): void {
+  ninePatch = null;
+  notify();
+}
+
+function applyNinePatch(): void {
+  const img = activeImage();
+  if (!img || !ninePatch || !state.layers) { ninePatch = null; notify(); return; }
+  const layers: LayerName[] = state.linked ? ['mask', 'overlay'] : [state.activeLayer];
+  for (const ln of layers) {
+    const layer = state.layers[ln];
+    if (!layer) continue;
+    layer.cells = ninePatchGrid(ninePatch.xCuts, ninePatch.yCuts, [img.width, img.height]);
+  }
+  state.dirty = true;
+  ninePatch = null;
+  notify();
+}
+
+// Hit-test the nearest cut line within HANDLE screen-px of the cursor.
+function hitCut(sx: number, sy: number): DragMode | null {
+  if (!ninePatch) return null;
+  let best: DragMode | null = null;
+  let bestDist = HANDLE;
+  for (const index of [0, 1] as const) {
+    const dxScreen = Math.abs(toScreen(ninePatch.xCuts[index], 0)[0] - sx);
+    if (dxScreen < bestDist) { bestDist = dxScreen; best = { kind: 'cut', axis: 'x', index }; }
+    const dyScreen = Math.abs(toScreen(0, ninePatch.yCuts[index])[1] - sy);
+    if (dyScreen < bestDist) { bestDist = dyScreen; best = { kind: 'cut', axis: 'y', index }; }
+  }
+  return best;
+}
+
+function dragCut(mode: Extract<DragMode, { kind: 'cut' }>, ix: number, iy: number): void {
+  const img = activeImage();
+  if (!ninePatch || !img) return;
+  if (mode.axis === 'x') {
+    ninePatch.xCuts[mode.index] = Math.max(0, Math.min(img.width, Math.round(ix)));
+    if (ninePatch.xCuts[0] > ninePatch.xCuts[1])
+      ninePatch.xCuts = [ninePatch.xCuts[1], ninePatch.xCuts[0]];
+  } else {
+    ninePatch.yCuts[mode.index] = Math.max(0, Math.min(img.height, Math.round(iy)));
+    if (ninePatch.yCuts[0] > ninePatch.yCuts[1])
+      ninePatch.yCuts = [ninePatch.yCuts[1], ninePatch.yCuts[0]];
+  }
+}
+
 export function renderRectEditor(host: HTMLElement): void {
   host.innerHTML = `
     <div style="padding:4px;display:flex;gap:8px;align-items:center">
@@ -85,6 +155,9 @@ export function renderRectEditor(host: HTMLElement): void {
       <label><input type="checkbox" id="linked"> linked layout</label>
       <label><input type="checkbox" id="mirror-x"> mirror X</label>
       <label><input type="checkbox" id="mirror-y"> mirror Y</label>
+      ${ninePatch
+        ? `<button id="np-apply">Apply</button><button id="np-cancel">Cancel</button>`
+        : `<button id="np-enter">9-patch</button>`}
       <span id="readout" style="margin-left:auto;font-family:monospace"></span>
     </div>
     <canvas id="rect-canvas" style="display:block;background:#333"></canvas>`;
@@ -105,6 +178,13 @@ export function renderRectEditor(host: HTMLElement): void {
   mx.onchange = () => { for (const c of editTargets()) c.mirrorX = mx.checked; state.dirty = true; notify(); };
   my.onchange = () => { for (const c of editTargets()) c.mirrorY = my.checked; state.dirty = true; notify(); };
 
+  const npEnter = host.querySelector<HTMLButtonElement>('#np-enter');
+  if (npEnter) { npEnter.disabled = !activeImage(); npEnter.onclick = enterNinePatch; }
+  const npApply = host.querySelector<HTMLButtonElement>('#np-apply');
+  if (npApply) npApply.onclick = applyNinePatch;
+  const npCancel = host.querySelector<HTMLButtonElement>('#np-cancel');
+  if (npCancel) npCancel.onclick = cancelNinePatch;
+
   canvas.onwheel = (e) => {
     e.preventDefault();
     const f = e.deltaY < 0 ? 1.25 : 0.8;
@@ -116,6 +196,14 @@ export function renderRectEditor(host: HTMLElement): void {
     draw(canvas);
   };
   canvas.onmousedown = (e) => {
+    if (ninePatch !== null) {
+      if (e.button === 1 || e.shiftKey) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY }; return; }
+      const cut = hitCut(e.offsetX, e.offsetY);
+      drag = cut
+        ? { mode: cut, lastX: e.offsetX, lastY: e.offsetY }
+        : { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY };
+      return;
+    }
     const cells = state.layers?.[state.activeLayer]?.cells;
     if (e.button === 1 || e.shiftKey || !cells) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY }; return; }
     const sel = state.selectedCell && cells[state.selectedCell[0]][state.selectedCell[1]];
@@ -131,6 +219,7 @@ export function renderRectEditor(host: HTMLElement): void {
     const dx = e.offsetX - drag.lastX, dy = e.offsetY - drag.lastY;
     drag.lastX = e.offsetX; drag.lastY = e.offsetY;
     if (drag.mode.kind === 'pan') { view.ox += dx; view.oy += dy; }
+    else if (drag.mode.kind === 'cut') { const [ix, iy] = toImage(e.offsetX, e.offsetY); dragCut(drag.mode, ix, iy); }
     else applyDrag(dx / view.zoom, dy / view.zoom, drag.mode);
     draw(canvas);
   };
@@ -139,12 +228,36 @@ export function renderRectEditor(host: HTMLElement): void {
   draw(canvas);
 }
 
+function drawNinePatch(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement | null): void {
+  if (!ninePatch) return;
+  const w = (img?.width ?? 0) * view.zoom;
+  const h = (img?.height ?? 0) * view.zoom;
+  ctx.strokeStyle = '#0af';
+  ctx.lineWidth = 1;
+  for (const cx of ninePatch.xCuts) {
+    const [sx] = toScreen(cx, 0);
+    ctx.beginPath(); ctx.moveTo(sx, view.oy); ctx.lineTo(sx, view.oy + h); ctx.stroke();
+  }
+  for (const cy of ninePatch.yCuts) {
+    const [, sy] = toScreen(0, cy);
+    ctx.beginPath(); ctx.moveTo(view.ox, sy); ctx.lineTo(view.ox + w, sy); ctx.stroke();
+  }
+  const readout = document.getElementById('readout');
+  if (readout) readout.textContent =
+    `9-patch  x=[${ninePatch.xCuts.join(', ')}]  y=[${ninePatch.yCuts.join(', ')}]`;
+}
+
 function draw(canvas: HTMLCanvasElement): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const img = ensureImageCanvas();
   ctx.imageSmoothingEnabled = view.zoom < 1;
   if (img) ctx.drawImage(img, view.ox, view.oy, img.width * view.zoom, img.height * view.zoom);
+
+  if (ninePatch !== null) {
+    drawNinePatch(ctx, img);
+    return;
+  }
 
   const cells = state.layers?.[state.activeLayer]?.cells;
   const readout = document.getElementById('readout');
