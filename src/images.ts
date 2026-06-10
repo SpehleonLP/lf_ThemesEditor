@@ -4,6 +4,10 @@ import type { Rgba } from './types';
 
 import { initializeCanvas, readPsd } from 'ag-psd';
 
+// Single source of truth for loadable image extensions — mirrored by loadImage's switch
+// (below) and the source-picker filter in ui/exportPanel.ts.
+export const SUPPORTED_IMAGE_EXTS = ['png', 'psd', 'webp', 'jpg', 'jpeg'] as const;
+
 // ag-psd's useImageData path still allocates ImageData objects through its `createImageData`
 // hook, whose default needs a real <canvas>. Supply a pure factory that returns a plain
 // {data,width,height} — NO canvas, NO premultiply round-trip — so this works in node tests
@@ -33,7 +37,7 @@ export function decodePsdComposite(bytes: Uint8Array): Rgba {
   return {
     width: psd.width,
     height: psd.height,
-    data: new Uint8Array(id.data.buffer, id.data.byteOffset, id.data.byteLength),
+    data: new Uint8Array(id.data),
   };
 }
 
@@ -42,12 +46,17 @@ async function decodeViaImageDecoder(bytes: Uint8Array, mime: string): Promise<R
   if (typeof (globalThis as any).ImageDecoder === 'undefined')
     throw new Error('ImageDecoder unavailable — use a Chromium-based browser for webp/jpg sources');
   const dec = new (globalThis as any).ImageDecoder({ data: bytes, type: mime, premultiplyAlpha: 'none' });
-  const { image } = await dec.decode();
-  const w = image.codedWidth, h = image.codedHeight;
-  const data = new Uint8Array(w * h * 4);
-  await image.copyTo(data, { format: 'RGBA' });
-  image.close(); dec.close();
-  return { width: w, height: h, data };
+  let image: any;
+  try {
+    ({ image } = await dec.decode());
+    const w = image.codedWidth, h = image.codedHeight;
+    const data = new Uint8Array(w * h * 4);
+    await image.copyTo(data, { format: 'RGBA' });
+    return { width: w, height: h, data };
+  } finally {
+    image?.close();
+    dec.close();
+  }
 }
 
 export async function loadImage(path: string): Promise<Rgba> {

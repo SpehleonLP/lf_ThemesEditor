@@ -1,13 +1,12 @@
 import { listDir, writeFileBytes } from '../api';
 import { defaultCellsForImage } from '../cells';
 import { applyPackResult, serializeDocument } from '../document';
-import { loadImage } from '../images';
+import { loadImage, SUPPORTED_IMAGE_EXTS } from '../images';
 import { encodePng } from '../png';
 import { packLayer, type PackLayerInput } from '../packer';
 import { state, notify, type LayerName } from './state';
 
 const SOURCE_ART_DIR = 'SourceArt';
-const IMAGE_EXTS = ['png', 'psd', 'webp', 'jpg', 'jpeg'];
 
 // Set a source image on the active layer (both layers when linked), load it, seed default
 // cells if the layer has none yet, then re-render. Path is relative to the Gui root.
@@ -57,7 +56,7 @@ export function renderExportPanel(host: HTMLElement): void {
     for (const e of entries) {
       if (e.dir) continue;
       const ext = e.name.slice(e.name.lastIndexOf('.') + 1).toLowerCase();
-      if (!IMAGE_EXTS.includes(ext)) continue;
+      if (!SUPPORTED_IMAGE_EXTS.includes(ext as (typeof SUPPORTED_IMAGE_EXTS)[number])) continue;
       const opt = document.createElement('option');
       opt.value = `${SOURCE_ART_DIR}/${e.name}`;
       opt.textContent = e.name;
