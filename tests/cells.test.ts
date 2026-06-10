@@ -49,7 +49,9 @@ test('25-rect form is direct row-major', () => {
 });
 
 test('mirror signs strip to flags and re-apply on both coords', () => {
-  const grid = (parseCellsJson(Array.from({ length: 25 }, () => [-10, 5, -20, 15] as Vec4)) as any).grid;
+  const parsed = parseCellsJson(Array.from({ length: 25 }, () => [-10, 5, -20, 15] as Vec4));
+  if (parsed.kind !== 'grid') throw new Error('expected grid');
+  const grid = parsed.grid;
   const ed = toEditorGrid(grid);
   expect(ed[0][0]).toEqual({ rect: [10, 5, 20, 15], mirrorX: true, mirrorY: false });
   const back = fromEditorGrid(ed);
@@ -57,8 +59,10 @@ test('mirror signs strip to flags and re-apply on both coords', () => {
 });
 
 test('serializeCells emits 25 pixel rects and rejects Infinity', () => {
-  const grid = (parseCellsJson([10, 20, 30, 40]) as any).grid;
-  expect(() => serializeCells(toEditorGrid(grid))).toThrow(/Infinity/);
+  const parsed = parseCellsJson([10, 20, 30, 40]);
+  if (parsed.kind !== 'grid') throw new Error('expected grid');
+  const grid = parsed.grid;
+  expect(() => serializeCells(toEditorGrid(grid))).toThrow(/non-finite/);
   const resolved = resolveInfinity(grid, [512, 256]); // Infinity → image dims
   const json = serializeCells(toEditorGrid(resolved));
   expect(json).toHaveLength(25);
@@ -69,4 +73,5 @@ test('bad shapes throw', () => {
   expect(() => parseCellsJson([1, 2, 3])).toThrow();
   expect(() => parseCellsJson([[], [1]])).toThrow();
   expect(() => parseCellsJson([[1, 2, 3, 4, 5, 6, 7], [1]])).toThrow();
+  expect(() => parseCellsJson([[], [], [], []])).toThrow(/all 4 values must be numbers/);
 });

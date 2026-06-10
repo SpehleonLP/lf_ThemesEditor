@@ -25,6 +25,9 @@ export function parseCellsJson(json: unknown): { kind: 'copy' } | { kind: 'grid'
     return { kind: 'grid', grid };
   }
 
+  if (json.length === 4)
+    throw new Error('Cells 4-cut form: all 4 values must be numbers');
+
   if (json.length === 2) {
     const lines = (json as number[][]).map((a) => {
       if (!Array.isArray(a) || a.length === 0) throw new Error('Cells x/y form: subarrays cannot be empty');
@@ -96,7 +99,7 @@ export function serializeCells(cells: CellGrid): Vec4[] {
   const out: Vec4[] = [];
   for (const row of grid)
     for (const r of row) {
-      if (r.some((v) => !Number.isFinite(v))) throw new Error('serializeCells: Infinity present — call resolveInfinity first');
+      if (r.some((v) => !Number.isFinite(v))) throw new Error('serializeCells: non-finite value present — call resolveInfinity first');
       out.push(r);
     }
   return out;
