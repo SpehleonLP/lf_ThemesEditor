@@ -28,6 +28,7 @@ function fillSelect(id: string, cur: string): string {
 
 export function renderPropertiesForm(host: HTMLElement): void {
   if (!state.doc || !state.selected || !state.layers) { host.innerHTML = ''; return; }
+  const markDirty = () => { state.dirty = true; state.saveStatus = null; notify(); };
   const entry = state.doc.root[state.selected];
   const L = state.layers[state.activeLayer];
   host.innerHTML = `
@@ -54,7 +55,7 @@ export function renderPropertiesForm(host: HTMLElement): void {
       const which = s.dataset.fill!;
       const tgt = which.startsWith('edge') ? L.edgeFill : L.centerFill;
       tgt[Number(which.slice(-1))] = s.value as any;
-      state.dirty = true; notify();
+      markDirty();
     };
   });
   host.querySelectorAll<HTMLInputElement>('input[data-edge]').forEach((inp) => {
@@ -68,7 +69,7 @@ export function renderPropertiesForm(host: HTMLElement): void {
       if (!Array.isArray(tgt[f]))
         tgt[f] = f === 'CenterTile' ? [1, 1, -1, -1] : f === 'MinSize' ? [0, 0] : [0, 0, 0, 0];
       tgt[f][Number(inp.dataset.i)] = n;
-      state.dirty = true; notify();
+      markDirty();
     };
   });
   (host.querySelector('#save') as HTMLButtonElement).onclick = async () => {

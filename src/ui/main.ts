@@ -42,6 +42,7 @@ export async function selectBorder(name: string): Promise<void> {
   state.selected = name;
   state.layers = { mask, overlay };
   state.selectedCell = null;
+  state.saveStatus = null;
   notify();
 }
 

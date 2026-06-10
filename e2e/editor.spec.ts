@@ -12,9 +12,10 @@ test.beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), 'gui-e2e-'));
   await cp('/mnt/Passport/Lifaundi/Gui', root, { recursive: true });
   proc = spawn('node', ['server.js', root], { env: { ...process.env, PORT: '8137' } });
+  proc.stderr?.on('data', (d) => console.error('[server]', String(d)));
   await new Promise((r) => proc.stdout!.once('data', r));
 });
-test.afterAll(() => proc.kill());
+test.afterAll(() => proc?.kill());
 
 test('open, edit a tessellation value, save, JSON updated', async ({ page }) => {
   await page.goto('/'); // server serves dist/ — requires `npm run build` first
