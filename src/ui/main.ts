@@ -4,6 +4,7 @@ import { parseCellsJson, toEditorGrid, resolveInfinity } from '../cells';
 import { loadImage } from '../images';
 import { state, notify, subscribe, type LayerState } from './state';
 import { renderBorderList } from './borderList';
+import { renderRectEditor } from './rectEditor';
 
 async function loadLayer(entry: any, key: 'Mask' | 'Overlay'): Promise<LayerState> {
   const ls: LayerState = { imagePath: null, image: null, cells: null, edgeFill: ['STRETCH', 'STRETCH'], centerFill: ['STRETCH', 'STRETCH'] };
@@ -44,6 +45,8 @@ async function boot(): Promise<void> {
   state.doc = parseDocument(await readFileText('borders.json'));
   const list = document.getElementById('border-list')!;
   subscribe(() => renderBorderList(list, (n) => void selectBorder(n)));
+  const editor = document.getElementById('editor')!;
+  subscribe(() => renderRectEditor(editor));
   notify();
 }
 
