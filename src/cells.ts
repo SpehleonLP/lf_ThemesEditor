@@ -104,3 +104,50 @@ export function serializeCells(cells: CellGrid): Vec4[] {
     }
   return out;
 }
+
+// ---- ports of gui_packagebuilder.cpp:948-1025 + the unorm16 store at :1419 ----
+
+export function isInPixels(grid: Vec4[][]): boolean {
+  for (const row of grid)
+    for (const r of row)
+      for (const v of r)
+        if ((v < -1 || v > 1) && Math.abs(v) !== Infinity) return true;
+  return false;
+}
+
+export function normalizeCells(gridIn: Vec4[][], size: [number, number]): Vec4[][] {
+  const grid = gridIn.map((row) => row.map((r) => r.slice() as Vec4));
+  const denom: Vec4 = [1 / size[0], 1 / size[1], 1 / size[0], 1 / size[1]];
+
+  if (!isInPixels(grid)) {
+    for (const row of grid)
+      for (const r of row)
+        for (let i = 0; i < 4; ++i)
+          if (r[i] === Infinity) r[i] = 1.0;
+  } else {
+    for (const row of grid)
+      for (const r of row) {
+        const p = r.slice() as Vec4;
+        for (let i = 0; i < 4; ++i) r[i] = p[i] * denom[i];
+        for (let i = 0; i < 4; ++i) {
+          if (p[i] === Infinity) r[i] = 1.0;
+          if (p[i] === 1.0) r[i] -= denom[i] / 2; // a 1-PIXEL coordinate, not normalized 1.0
+        }
+      }
+  }
+
+  // denom *= 0.5; inset exact edges by half a texel
+  for (const row of grid)
+    for (const r of row)
+      for (let i = 0; i < 4; ++i) {
+        if (r[i] === 1.0) r[i] -= denom[i] * 0.5;
+        if (r[i] === 0.0) r[i] += denom[i] * 0.5;
+      }
+  return grid;
+}
+
+// What the GPU sees: round(clamp(|v|/2)·65535)/65535 · 2  (store ÷2 in unorm16, shader ×2 on read)
+export function quantizeUnorm16(v: number): number {
+  const q = Math.round(Math.min(Math.max(Math.abs(v) / 2, 0), 1) * 65535) / 65535;
+  return q * 2;
+}
