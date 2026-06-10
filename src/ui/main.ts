@@ -4,7 +4,7 @@ import { parseCellsJson, toEditorGrid, resolveInfinity } from '../cells';
 import { loadImage } from '../images';
 import { state, notify, subscribe, type LayerState } from './state';
 import { renderBorderList } from './borderList';
-import { renderRectEditor } from './rectEditor';
+import { renderRectEditor, exitNinePatch } from './rectEditor';
 import { renderPropertiesForm } from './propertiesForm';
 import { renderPreviewPanel } from './previewPanel';
 import { renderExportPanel } from './exportPanel';
@@ -38,6 +38,7 @@ export async function selectBorder(name: string): Promise<void> {
   // #COPY resolution: a null grid copies the other layer's (cpp:857-870 NaN merge)
   if (!mask.cells && overlay.cells) mask.cells = structuredClone(overlay.cells);
   if (!overlay.cells && mask.cells) overlay.cells = structuredClone(mask.cells);
+  exitNinePatch(); // drop stale 9-patch cuts from the previously-selected border's image
   state.selected = name;
   state.layers = { mask, overlay };
   state.selectedCell = null;

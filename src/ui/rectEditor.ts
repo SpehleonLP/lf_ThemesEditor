@@ -106,6 +106,12 @@ function cancelNinePatch(): void {
   notify();
 }
 
+// Leave 9-patch mode without notifying — for external callers (border/layer switch)
+// that will notify() themselves. Prevents stale image-space cuts leaking across images.
+export function exitNinePatch(): void {
+  ninePatch = null;
+}
+
 function applyNinePatch(): void {
   const img = activeImage();
   if (!img || !ninePatch || !state.layers) { ninePatch = null; notify(); return; }
@@ -138,13 +144,16 @@ function dragCut(mode: Extract<DragMode, { kind: 'cut' }>, ix: number, iy: numbe
   const img = activeImage();
   if (!ninePatch || !img) return;
   if (mode.axis === 'x') {
-    ninePatch.xCuts[mode.index] = Math.max(0, Math.min(img.width, Math.round(ix)));
-    if (ninePatch.xCuts[0] > ninePatch.xCuts[1])
-      ninePatch.xCuts = [ninePatch.xCuts[1], ninePatch.xCuts[0]];
+    const v = Math.max(0, Math.min(img.width, Math.round(ix)));
+    // clamp to the sibling so the held line never crosses (index stays put)
+    ninePatch.xCuts[mode.index] = mode.index === 0
+      ? Math.min(v, ninePatch.xCuts[1])
+      : Math.max(v, ninePatch.xCuts[0]);
   } else {
-    ninePatch.yCuts[mode.index] = Math.max(0, Math.min(img.height, Math.round(iy)));
-    if (ninePatch.yCuts[0] > ninePatch.yCuts[1])
-      ninePatch.yCuts = [ninePatch.yCuts[1], ninePatch.yCuts[0]];
+    const v = Math.max(0, Math.min(img.height, Math.round(iy)));
+    ninePatch.yCuts[mode.index] = mode.index === 0
+      ? Math.min(v, ninePatch.yCuts[1])
+      : Math.max(v, ninePatch.yCuts[0]);
   }
 }
 
@@ -166,7 +175,7 @@ export function renderRectEditor(host: HTMLElement): void {
   canvas.height = (host.clientHeight || 600) - 30;
 
   host.querySelectorAll<HTMLButtonElement>('button[data-layer]').forEach((b) => {
-    b.onclick = () => { state.activeLayer = b.dataset.layer as LayerName; notify(); };
+    b.onclick = () => { ninePatch = null; state.activeLayer = b.dataset.layer as LayerName; notify(); };
   });
   const linked = host.querySelector<HTMLInputElement>('#linked')!;
   linked.checked = state.linked;
