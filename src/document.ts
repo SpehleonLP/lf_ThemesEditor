@@ -1,5 +1,5 @@
 import { serializeCells } from './cells';
-import type { CellGrid } from './types';
+import type { CellGrid, EditorCell } from './types';
 
 export interface BordersDoc {
   root: Record<string, any>;
@@ -39,4 +39,36 @@ export function applyLayerToEntry(entry: any, key: 'Mask' | 'Overlay', edit: Lay
   if (edit.cells) entry[key].Cells = serializeCells(edit.cells);
   entry[key].EdgeFill = edit.edgeFill;
   entry[key].CenterFill = edit.centerFill;
+}
+
+export interface PackApply {
+  overlayImage: string | null;
+  maskImage: string | null;
+  overlayCells: CellGrid | null;
+  maskCells: CellGrid | null;
+  linked: boolean;
+  source: { overlay?: string; mask?: string; linked: boolean };
+  sourceCells: CellGrid;
+  pack: { gutter: number; align: number };
+}
+
+const flat = (g: CellGrid): EditorCell[] => g.flat().map((c) => ({ rect: c.rect, mirrorX: c.mirrorX, mirrorY: c.mirrorY }));
+
+export function applyPackResult(entry: any, r: PackApply): void {
+  if (r.overlayImage && r.overlayCells) {
+    entry.Overlay ??= {};
+    entry.Overlay.Image = r.overlayImage;
+    entry.Overlay.Cells = serializeCells(r.overlayCells);
+  }
+  if (r.maskImage && r.maskCells) {
+    entry.Mask ??= {};
+    entry.Mask.Image = r.maskImage;
+    entry.Mask.Cells = r.linked ? '#COPY' : serializeCells(r.maskCells);
+  }
+  entry.Editor = {
+    version: 1,
+    source: r.source,
+    sourceCells: flat(r.sourceCells),
+    pack: r.pack,
+  };
 }

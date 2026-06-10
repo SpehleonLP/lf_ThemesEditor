@@ -7,6 +7,7 @@ import { renderBorderList } from './borderList';
 import { renderRectEditor } from './rectEditor';
 import { renderPropertiesForm } from './propertiesForm';
 import { renderPreviewPanel } from './previewPanel';
+import { renderExportPanel } from './exportPanel';
 
 async function loadLayer(entry: any, key: 'Mask' | 'Overlay'): Promise<LayerState> {
   const ls: LayerState = { imagePath: null, image: null, cells: null, edgeFill: ['STRETCH', 'STRETCH'], centerFill: ['STRETCH', 'STRETCH'] };
@@ -53,6 +54,8 @@ async function boot(): Promise<void> {
   subscribe(() => renderPropertiesForm(props));
   const previewHost = document.getElementById('preview-host')!;
   subscribe(() => renderPreviewPanel(previewHost));
+  const exportHost = document.getElementById('export-host')!;
+  subscribe(() => renderExportPanel(exportHost));
   notify();
 }
 
