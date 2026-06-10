@@ -97,7 +97,7 @@ export function renderRectEditor(host: HTMLElement): void {
   });
   const linked = host.querySelector<HTMLInputElement>('#linked')!;
   linked.checked = state.linked;
-  linked.onchange = () => { state.linked = linked.checked; };
+  linked.onchange = () => { state.linked = linked.checked; notify(); };
   const mx = host.querySelector<HTMLInputElement>('#mirror-x')!;
   const my = host.querySelector<HTMLInputElement>('#mirror-y')!;
   const selCell = state.selectedCell && state.layers?.[state.activeLayer]?.cells?.[state.selectedCell[0]]?.[state.selectedCell[1]];
@@ -110,6 +110,7 @@ export function renderRectEditor(host: HTMLElement): void {
     const f = e.deltaY < 0 ? 1.25 : 0.8;
     const [ix, iy] = toImage(e.offsetX, e.offsetY);
     view.zoom *= f;
+    view.zoom = Math.max(0.05, Math.min(64, view.zoom));
     view.ox = e.offsetX - ix * view.zoom;
     view.oy = e.offsetY - iy * view.zoom;
     draw(canvas);
