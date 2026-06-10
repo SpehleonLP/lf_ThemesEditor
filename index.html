@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Kreatures GUI Borders Editor</title>
+  <style>
+    html, body { margin: 0; height: 100%; font: 13px sans-serif; background: #222; color: #ddd; }
+    #app { display: grid; grid-template-columns: 220px 1fr 340px; height: 100%; }
+    #app > * { overflow: auto; min-width: 0; }
+  </style>
+</head>
+<body>
+  <div id="app"><nav id="border-list"></nav><main id="editor"></main><aside id="props"></aside></div>
+  <script type="module" src="/src/ui/main.ts"></script>
+</body>
+</html>
