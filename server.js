@@ -29,7 +29,13 @@ async function atomicWrite(abs, buf) {
   const tmp = abs + '.tmp';
   const fh = await fsp.open(tmp, 'w');
   try { await fh.writeFile(buf); await fh.sync(); } finally { await fh.close(); }
-  await fsp.rename(tmp, abs); // fsync-then-rename: safe on the FUSE mount
+  // fsync-then-rename: safe on the FUSE mount; clean up the temp file if rename fails
+  try {
+    await fsp.rename(tmp, abs);
+  } catch (e) {
+    await fsp.unlink(tmp).catch(() => {});
+    throw e;
+  }
 }
 
 function readBody(req) {
