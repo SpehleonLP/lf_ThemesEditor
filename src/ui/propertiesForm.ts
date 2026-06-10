@@ -48,21 +48,27 @@ export function renderPropertiesForm(host: HTMLElement): void {
   });
   host.querySelectorAll<HTMLInputElement>('input[data-edge]').forEach((inp) => {
     inp.onchange = () => {
+      const n = Number(inp.value);
+      if (!Number.isFinite(n)) return;
       const parts = inp.dataset.edge!.split('.'); // 'Tessellation' or 'Style.Margin'
       let tgt = entry;
       for (const k of parts.slice(0, -1)) tgt = tgt[k] ??= {};
       const f = parts[parts.length - 1];
       if (!Array.isArray(tgt[f]))
         tgt[f] = f === 'CenterTile' ? [1, 1, -1, -1] : f === 'MinSize' ? [0, 0] : [0, 0, 0, 0];
-      tgt[f][Number(inp.dataset.i)] = Number(inp.value);
+      tgt[f][Number(inp.dataset.i)] = n;
       state.dirty = true; notify();
     };
   });
   (host.querySelector('#save') as HTMLButtonElement).onclick = async () => {
-    applyLayerToEntry(entry, 'Mask', state.layers!.mask.cells && entryHasOwnCells(entry, 'Mask')
-      ? { cells: state.layers!.mask.cells, edgeFill: state.layers!.mask.edgeFill as any, centerFill: state.layers!.mask.centerFill as any }
-      : { cells: null, edgeFill: state.layers!.mask.edgeFill as any, centerFill: state.layers!.mask.centerFill as any });
-    applyLayerToEntry(entry, 'Overlay', { cells: state.layers!.overlay.cells, edgeFill: state.layers!.overlay.edgeFill as any, centerFill: state.layers!.overlay.centerFill as any });
+    const editFor = (key: 'Mask' | 'Overlay') => {
+      const lyr = state.layers![key.toLowerCase() as 'mask' | 'overlay'];
+      return (lyr.cells && entryHasOwnCells(entry, key))
+        ? { cells: lyr.cells, edgeFill: lyr.edgeFill as any, centerFill: lyr.centerFill as any }
+        : { cells: null, edgeFill: lyr.edgeFill as any, centerFill: lyr.centerFill as any };
+    };
+    applyLayerToEntry(entry, 'Mask', editFor('Mask'));
+    applyLayerToEntry(entry, 'Overlay', editFor('Overlay'));
     await writeFileBytes('borders.json', serializeDocument(state.doc!));
     state.dirty = false;
     (host.querySelector('#save-status') as HTMLElement).textContent = `saved ${new Date().toLocaleTimeString()}`;
