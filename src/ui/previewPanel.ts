@@ -17,7 +17,12 @@ function layerInput(name: LayerName): PreviewLayer | null {
 }
 
 export function renderPreviewPanel(host: HTMLElement): void {
-  if (!state.doc || !state.selected) { host.innerHTML = ''; renderer = null; return; }
+  if (!state.doc || !state.selected) {
+    renderer?.dispose();
+    renderer = null;
+    host.innerHTML = '';
+    return;
+  }
   if (!host.querySelector('#preview-canvas')) {
     host.innerHTML = `
       <h3 style="margin:8px">Preview</h3>
@@ -30,8 +35,9 @@ export function renderPreviewPanel(host: HTMLElement): void {
         style="margin:8px;background:repeating-conic-gradient(#555 0% 25%, #777 0% 50%) 0 0 / 16px 16px"></canvas>`;
     renderer = new PreviewRenderer(host.querySelector('#preview-canvas')!);
     const rerun = () => {
-      panel = [Number((host.querySelector('#pv-w') as HTMLInputElement).value),
-               Number((host.querySelector('#pv-h') as HTMLInputElement).value)];
+      const num = (s: string, d: number) => { const n = Number(s); return n > 0 ? n : d; };
+      panel = [num((host.querySelector('#pv-w') as HTMLInputElement).value, panel[0]),
+               num((host.querySelector('#pv-h') as HTMLInputElement).value, panel[1])];
       showOverlayRegion = (host.querySelector('#pv-og') as HTMLInputElement).checked;
       renderPreviewPanel(host);
     };

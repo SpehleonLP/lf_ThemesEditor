@@ -40,6 +40,25 @@ design, surfaced by the Task 7 code-quality review. They were NOT applied becaus
   `[FillMode, FillMode]` (FillMode already exists in types.ts) would remove the `as any` casts in
   propertiesForm.ts and catch invalid fill values at compile time. Deferred (ripples into state.ts).
 
+## WebGL2 renderer (Task 10) — perf follow-ups
+
+Surfaced by the Task 10 code-quality review. The Critical/Important resource-hygiene
+items (dispose(), shader detach+delete, context guard) WERE fixed in `0d584728`.
+These remaining items are perf smells, correctness-safe, deferred until the Task 11
+preview consumer makes the cost real:
+
+- **M5 — `u()` returns `WebGLUniformLocation | null` straight into `gl.uniform*`.** A mistyped
+  uniform name (or one optimized out by the GLSL compiler) silently no-ops. All current names
+  verified correct against the shader. Consider a dev-only assert when a location is null but the
+  program linked clean.
+- **M6 — `upload()` does a full `texImage2D` (realloc) every `render()`** even when the image is
+  unchanged. For an interactive preview re-rendering on each cell drag this re-uploads the whole
+  border image per frame. Switch to `texSubImage2D` (or a dirty flag) once the image is stable and
+  only band geometry changes.
+- **M7 — `getUniformLocation` called every render for every uniform, no caching.** ~20 lookups/frame.
+  Locations are stable post-link; cache them at construction when optimizing the render loop. Pairs
+  with the M5 fix.
+
 ## Deferred view-fit (Task 7 minor)
 
 - Module-level `view` (zoom/pan) is not reset/fit when switching borders; a differently-sized border
