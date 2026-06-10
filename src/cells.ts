@@ -63,6 +63,16 @@ export function parseCellsJson(json: unknown): { kind: 'copy' } | { kind: 'grid'
   throw new Error('field Cells should have either 2, 4, 9 or 25 members');
 }
 
+// A fresh image with no Cells JSON gets a single full-image cell (the whole picture as the
+// top-left cell; the artist then drags the 9-slice cuts out). Built through the same
+// parse → resolveInfinity → toEditorGrid pipeline main.ts uses, so there's no second code path.
+export function defaultCellsForImage(size: [number, number]): CellGrid {
+  const [w, h] = size;
+  const parsed = parseCellsJson([h, w, h, w]); // [y0,x0,y1,x1]: cuts at the image edges
+  if (parsed.kind !== 'grid') throw new Error('defaultCellsForImage: expected a grid');
+  return toEditorGrid(resolveInfinity(parsed.grid, size));
+}
+
 export function toEditorGrid(grid: Grid): CellGrid {
   return grid.map((row) => row.map((r): EditorCell => ({
     rect: [Math.abs(r[0]), Math.abs(r[1]), Math.abs(r[2]), Math.abs(r[3])],

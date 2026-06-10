@@ -1,20 +1,73 @@
-import { writeFileBytes } from '../api';
+import { listDir, writeFileBytes } from '../api';
+import { defaultCellsForImage } from '../cells';
 import { applyPackResult, serializeDocument } from '../document';
+import { loadImage } from '../images';
 import { encodePng } from '../png';
 import { packLayer, type PackLayerInput } from '../packer';
-import { state, notify } from './state';
+import { state, notify, type LayerName } from './state';
+
+const SOURCE_ART_DIR = 'SourceArt';
+const IMAGE_EXTS = ['png', 'psd', 'webp', 'jpg', 'jpeg'];
+
+// Set a source image on the active layer (both layers when linked), load it, seed default
+// cells if the layer has none yet, then re-render. Path is relative to the Gui root.
+async function pickSource(path: string, status: HTMLElement): Promise<void> {
+  if (!state.layers) return;
+  const targets: LayerName[] = state.linked ? ['mask', 'overlay'] : [state.activeLayer];
+  try {
+    const image = await loadImage(path);
+    for (const name of targets) {
+      const ls = state.layers[name];
+      ls.imagePath = path;
+      ls.image = image;
+      if (!ls.cells) ls.cells = defaultCellsForImage([image.width, image.height]);
+    }
+    state.dirty = true;
+    status.textContent = `loaded ${path} (${image.width}×${image.height})`;
+    notify();
+  } catch (e) {
+    status.textContent = `load ${path}: ${String(e)}`;
+  }
+}
 
 export function renderExportPanel(host: HTMLElement): void {
   if (!state.selected || !state.layers) { host.innerHTML = ''; return; }
+  const current = state.layers[state.activeLayer].imagePath ?? '';
   host.innerHTML = `
     <div style="padding:8px;border-top:1px solid #444">
-      <h4 style="margin:4px 0">Pack &amp; export</h4>
+      <h4 style="margin:4px 0">Source image (${state.linked ? 'both layers' : state.activeLayer})</h4>
+      <div style="display:flex;gap:4px">
+        <input id="pk-src" type="text" value="${current.replace(/"/g, '&quot;')}" placeholder="SourceArt/foo.psd" style="flex:1">
+        <button id="pk-src-load">Load</button>
+      </div>
+      <select id="pk-src-browse" style="width:100%;margin-top:4px"><option value="">browse ${SOURCE_ART_DIR}/…</option></select>
+      <h4 style="margin:8px 0 4px">Pack &amp; export</h4>
       <label>gutter <input id="pk-gutter" type="number" value="8" style="width:50px"></label>
       <button id="pk-go">Pack → PNG + JSON</button>
       <div id="pk-status"></div>
     </div>`;
+  const status = host.querySelector('#pk-status') as HTMLElement;
+  const srcInput = host.querySelector('#pk-src') as HTMLInputElement;
+  (host.querySelector('#pk-src-load') as HTMLButtonElement).onclick = () => {
+    const p = srcInput.value.trim();
+    if (p) void pickSource(p, status);
+  };
+  const browse = host.querySelector('#pk-src-browse') as HTMLSelectElement;
+  void listDir(SOURCE_ART_DIR).then((entries) => {
+    for (const e of entries) {
+      if (e.dir) continue;
+      const ext = e.name.slice(e.name.lastIndexOf('.') + 1).toLowerCase();
+      if (!IMAGE_EXTS.includes(ext)) continue;
+      const opt = document.createElement('option');
+      opt.value = `${SOURCE_ART_DIR}/${e.name}`;
+      opt.textContent = e.name;
+      browse.appendChild(opt);
+    }
+  }).catch(() => { /* SourceArt dir may not exist yet */ });
+  browse.onchange = () => {
+    if (browse.value) { srcInput.value = browse.value; void pickSource(browse.value, status); }
+  };
   (host.querySelector('#pk-go') as HTMLButtonElement).onclick = async () => {
-    const status = host.querySelector('#pk-status') as HTMLElement;
     let wroteSheets = false;
     try {
       const raw = Number((host.querySelector('#pk-gutter') as HTMLInputElement).value);
