@@ -71,6 +71,20 @@ preview consumer makes the cost real:
   The packer API itself is correct (20k-case stress: all placements aligned, in-bounds, non-overlapping
   padded footprints); this is a consumer-side decision, not a packer bug.
 
+## Packer (Task 14) — note for Task 15 export consumer
+
+- **Degenerate (collapsed-band) cells retain SOURCE-space rects in the rewritten sheet-space grid.**
+  `packLayer` skips cells with `w<=0||h<=0` during dedup and passes them through unchanged
+  (`structuredClone`), so the rewritten `cells` mixes sheet-space rects (real pieces) with
+  source-space rects (degenerate). Both reviewers confirmed this is downstream-HARMLESS: a
+  zero-extent axis collapses the cell to zero UV span → no texels sampled regardless of where the
+  stale coord points (and `quantizeUnorm16` clamps to [0,1]). Task 15's export path just needs to
+  not treat a degenerate cell's stale coords as meaningful — they render nothing.
+- **Linked-layout dedup keys only off the LEAD layer's cells.** Correct for #COPY (linked layers
+  MUST share geometry by definition), and now guarded: `packLayer` throws if linked group members'
+  source dimensions differ. The cells-geometry match is still relied upon (the UI edits linked
+  layers in lockstep) rather than validated cell-by-cell — acceptable given the single caller.
+
 ## Deferred view-fit (Task 7 minor)
 
 - Module-level `view` (zoom/pan) is not reset/fit when switching borders; a differently-sized border

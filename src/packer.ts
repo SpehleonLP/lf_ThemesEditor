@@ -37,6 +37,13 @@ export function packLayer(
 
   for (const group of groups) {
     const lead = group[0];
+    // Linked layers share the lead's layout AND blit from coords resolved against the
+    // lead's cells, so every group source must share the lead's dimensions — otherwise a
+    // smaller secondary would under-read in blit() and silently emit garbage/black pixels.
+    for (const layer of group)
+      if (layer.source.width !== lead.source.width || layer.source.height !== lead.source.height)
+        throw new Error(`pack: linked layer "${layer.name}" source ${layer.source.width}x${layer.source.height} != lead "${lead.name}" ${lead.source.width}x${lead.source.height}`);
+
     // 1. dedup unique pieces
     const keyToId = new Map<string, number>();
     const pieces: { id: number; w: number; h: number; sx: number; sy: number }[] = [];
@@ -48,6 +55,12 @@ export function packLayer(
         const y0 = Math.min(c.rect[1], c.rect[3]), y1 = Math.max(c.rect[1], c.rect[3]);
         const w = x1 - x0, h = y1 - y0;
         if (w <= 0 || h <= 0) continue; // degenerate cells (collapsed bands) carry no pixels
+        // blit() does no bounds-clamping: a rect off the source image would silently copy
+        // short/zero rows (black) or wrap into the next source row (garbage). Reject it.
+        if (!Number.isInteger(x0) || !Number.isInteger(y0) || !Number.isInteger(w) || !Number.isInteger(h))
+          throw new Error(`pack: non-integer cell rect [${c.rect}] (${lead.name})`);
+        if (x0 < 0 || y0 < 0 || x1 > lead.source.width || y1 > lead.source.height)
+          throw new Error(`pack: cell rect [${x0},${y0},${x1},${y1}] out of source bounds ${lead.source.width}x${lead.source.height} (${lead.name})`);
         keyToId.set(key, pieces.length);
         pieces.push({ id: pieces.length, w, h, sx: x0, sy: y0 });
       }

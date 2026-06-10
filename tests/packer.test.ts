@@ -55,6 +55,45 @@ test('linked mask+overlay share layout; mask emits #COPY-compatible cells', () =
   expect(r.cells['mask']).toEqual(r.cells['overlay']); // identical → caller writes "#COPY"
 });
 
+test('unlinked layers pack into independent sheets', () => {
+  const a = packLayer([
+    { name: 'a', source: solidImage(64, 64), cells: gridOf(cell([0, 0, 32, 32])) },
+    { name: 'b', source: solidImage(64, 64), cells: gridOf(cell([0, 0, 16, 16])) },
+  ], { gutter: 8, align: 4 }); // linked omitted → independent
+  expect(a.sheets).toHaveLength(2);
+  expect(a.cells['a']).not.toEqual(a.cells['b']); // different geometry, independent layouts
+});
+
+test('a source rect outside the image throws (no silent black/garbage blit)', () => {
+  const src = solidImage(64, 64);
+  expect(() => packLayer([{ name: 'oob', source: src, cells: gridOf(cell([56, 56, 80, 80])) }],
+    { gutter: 8, align: 4 })).toThrow(/out of source bounds/);
+});
+
+test('a non-integer source rect throws (blit would truncate)', () => {
+  const src = solidImage(64, 64);
+  expect(() => packLayer([{ name: 'frac', source: src, cells: gridOf(cell([3.5, 4, 20, 20])) }],
+    { gutter: 8, align: 4 })).toThrow(/non-integer/);
+});
+
+test('linked layers with mismatched source dimensions throw', () => {
+  expect(() => packLayer([
+    { name: 'lead', source: solidImage(64, 64), cells: gridOf(cell([0, 0, 32, 32])) },
+    { name: 'sec', source: solidImage(32, 32), cells: gridOf(cell([0, 0, 32, 32])) },
+  ], { gutter: 8, align: 4, linked: true })).toThrow(/!=/);
+});
+
+test('pieces that cannot fit any legal canvas throw with the layer name', () => {
+  const src = solidImage(4096, 4096);
+  // 30 pieces of 1000x1000 → with gutter+align padded ~1008, cannot co-fit ≤4096
+  const grid = gridOf(cell([0, 0, 10, 10]));
+  let id = 0;
+  for (let i = 0; i < 5; ++i) for (let j = 0; j < 5; ++j)
+    grid[i][j] = cell([id * 1, 0, 1000 + (id++ % 3), 1000]); // distinct large pieces
+  expect(() => packLayer([{ name: 'toobig', source: src, cells: grid }],
+    { gutter: 8, align: 4 })).toThrow(/do not fit/);
+});
+
 test('unorm16 precision: rewritten cells survive normalize+quantize within half a pixel', () => {
   const src = solidImage(512, 512);
   const grid = gridOf(cell([3, 5, 130, 250]));
