@@ -1,24 +1,43 @@
 import { packRects, type Piece, type Placed } from './maxrects';
 
+// Faithful port of Gui::MegatextureFactory::Prepare()
+// (Engine/src/Gui/Themes/gui_makemegatextures.cpp:113-149). The engine applies
+// per-side rules INDEPENDENTLY, and only requires a square when BOTH sides are <256:
+//   - every side must be a multiple of 4 and >= 4
+//   - a side < 256 must be a power of two (→ 4,8,16,32,64,128)
+//   - a side >= 256 must be a multiple of 128
+//   - if BOTH sides are < 256 they must be equal (square)
+// So a small pow-2 side may legally pair with a large %128 side (e.g. 128×256).
+const sideOk = (s: number) =>
+  s % 4 === 0 && s >= 4 && (s < 256 ? (s & (s - 1)) === 0 : s % 128 === 0);
+
 export function isLegalSheet(w: number, h: number): boolean {
-  if (w % 4 || h % 4 || w < 4 || h < 4) return false;
-  if (w < 256 || h < 256) {
-    // any side under 256 ⇒ pow-2 square (max 128, since 256 falls to the other branch)
-    return w === h && w <= 128 && (w & (w - 1)) === 0;
-  }
-  return w % 128 === 0 && h % 128 === 0;
+  return sideOk(w) && sideOk(h) && !(w < 256 && h < 256 && w !== h);
 }
 
+let _candidateCache: Map<number, [number, number][]> | null = null;
+
 export function candidateSheets(maxDim = 4096): [number, number][] {
+  const cached = _candidateCache?.get(maxDim);
+  if (cached) return cached;
+  // Legal sides: pow-2 squares 4..128, plus 256..maxDim in steps of 128.
+  const smalls: number[] = [];
+  for (let s = 4; s <= 128; s *= 2) smalls.push(s);
+  const bigs: number[] = [];
+  for (let b = 256; b <= maxDim; b += 128) bigs.push(b);
+
   const out: [number, number][] = [];
-  for (let s = 4; s <= 128; s *= 2) out.push([s, s]);
-  for (let w = 256; w <= maxDim; w += 128)
-    for (let h = 256; h <= maxDim; h += 128)
-      out.push([w, h]);
+  for (const s of smalls) out.push([s, s]);          // pow-2 squares (both sides <256 ⇒ must be square)
+  for (const s of smalls)                            // small pow-2 × large %128 (both orders)
+    for (const b of bigs) { out.push([s, b]); out.push([b, s]); }
+  for (const w of bigs) for (const h of bigs) out.push([w, h]); // large × large grid
+
   const pref256 = ([w, h]: [number, number]) => (w % 256 === 0 && h % 256 === 0 ? 0 : 1);
   const aspect = ([w, h]: [number, number]) => Math.abs(Math.log(w / h));
-  return out.sort((a, b) =>
+  out.sort((a, b) =>
     a[0] * a[1] - b[0] * b[1] || pref256(a) - pref256(b) || aspect(a) - aspect(b));
+  (_candidateCache ??= new Map()).set(maxDim, out);
+  return out;
 }
 
 export function findCanvas(
