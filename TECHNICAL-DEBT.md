@@ -90,3 +90,33 @@ preview consumer makes the cost real:
 - Module-level `view` (zoom/pan) is not reset/fit when switching borders; a differently-sized border
   keeps the previous transform. Likely intended for a later slice — wire an auto-fit-on-select if
   integration shows it's needed.
+
+## Spec-vs-plan gaps (final whole-implementation review, 2026-06-10)
+
+The 18-task plan was executed completely and faithfully, but the final holistic review found three
+symbols that the plan defined + unit-tested as Task-3 building blocks yet **no plan task ever wired
+into the app**. They are orphan exports today (not accidental dead code — deliberately un-consumed
+because the plan never tasked their consumers). The spec implies them; the plan did not schedule them.
+Decide explicitly per item: wire it, or accept the gap.
+
+- **`isValidBorderName` (src/borderNames.ts) has no consumer — there is no new-border creation UI.**
+  Spec §4.3 promised "border list … with new-border with validated name." The validator exists and is
+  tested, but nothing in the app creates a border. To close: a small new-border modal (name field →
+  `isValidBorderName` → insert empty entry into `state.doc.root`).
+- **`getEditorMeta`/`setEditorMeta` (src/document.ts:23-29) are never called; `Editor` metadata is
+  write-only.** `applyPackResult` writes `entry.Editor` (source image + source-space cells + pack
+  settings), but `selectBorder` (src/ui/main.ts) always loads a border from its **packed sheet** cells,
+  never from `Editor.source`/`Editor.sourceCells`. So the Slice-4 exit criterion "remains re-editable
+  via Editor metadata" holds only in the write direction — you can pack once, but re-opening a packed
+  border to re-pack-from-original-source is not wired. To close: an Editor read-back path in
+  `selectBorder` that, when `entry.Editor` is present, restores the source image + source-space cells
+  instead of the packed cells.
+
+## File-server symlink jail caveat (server.js:18-25, final review minor)
+
+- `jail()` correctly blocks `..` and absolute-path escapes via string-prefix check (covered by
+  tests/server.test.ts), but does **not** resolve symlinks: a symlink *inside* the Gui root pointing
+  outward (`root/x → /etc`) would pass the prefix check and `fs.readFile`/write would follow it out.
+  Low risk for a 127.0.0.1-bound dev tool over a trusted asset tree, and arguably out of scope, but
+  the one real jail gap. Harden (if wanted) with `fs.realpath` on the resolved path + re-check the
+  prefix. Server bind is confirmed 127.0.0.1-only.
