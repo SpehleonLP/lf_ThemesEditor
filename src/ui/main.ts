@@ -6,6 +6,7 @@ import { state, notify, subscribe, type LayerState } from './state';
 import { renderBorderList } from './borderList';
 import { renderRectEditor } from './rectEditor';
 import { renderPropertiesForm } from './propertiesForm';
+import { renderPreviewPanel } from './previewPanel';
 
 async function loadLayer(entry: any, key: 'Mask' | 'Overlay'): Promise<LayerState> {
   const ls: LayerState = { imagePath: null, image: null, cells: null, edgeFill: ['STRETCH', 'STRETCH'], centerFill: ['STRETCH', 'STRETCH'] };
@@ -50,6 +51,8 @@ async function boot(): Promise<void> {
   subscribe(() => renderRectEditor(editor));
   const props = document.getElementById('props')!;
   subscribe(() => renderPropertiesForm(props));
+  const previewHost = document.getElementById('preview-host')!;
+  subscribe(() => renderPreviewPanel(previewHost));
   notify();
 }
 
