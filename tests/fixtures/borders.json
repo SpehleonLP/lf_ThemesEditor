@@ -1,0 +1,1122 @@
+{
+	"Window_0":
+	{	
+		"Mask" :
+		{
+			"Image": "Images/scroll_window_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay":
+		{
+			"Image": "Images/scroll_window.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[4.0, 174.0, 858.0, 1024.0],
+				[0.0, 256.0, 256.0, 512.0]
+			]
+		},
+
+		"Tessellation": [32.0, 64.0, 32.0, 64.0],
+		"Expansion": [32.0, 20.0, 32.0, 20.0],
+
+		"Style":
+		{
+			"Padding": [4, 4, 4, 4],
+			"Margin": [8, 8, 8, 8]
+		}		
+	},
+
+	"GridItem_0":
+	{
+		"Mask" :
+		{
+			"Image": "Images/item_frame_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+
+		"Overlay" :
+		{
+			"Image": "Images/item_frame_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[2.0, 12.0, 51.0, 61.0],
+				[3.0, 13.0, 51.0, 61.0]
+
+			]
+		},
+
+
+		"Tessellation": [6, 6, 6, 6],
+		"Expansion": [0, 0, 0, 0],
+
+		"Style":
+		{
+			"Padding": [1, 1, 1, 1],
+			"Margin": [3, 3, 3, 3]
+		}
+	},
+
+	"GridItem_1":
+	{
+		"Mask" :
+		{
+			"Image": "Images/item_frame_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+
+		"Overlay" :
+		{
+			"Image": "Images/item_frame_border_gold.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[2.0, 12.0, 51.0, 61.0],
+				[3.0, 13.0, 51.0, 61.0]
+			]
+		},
+
+		"Tessellation": [6, 6, 6, 6],
+		"Expansion": [0, 0, 0, 0],
+
+		"Style":
+		{
+			"Padding": [1, 1, 1, 1],
+			"Margin": [3, 3, 3, 3]
+		}
+	},
+
+	"GridItem_2":
+	{
+		"Mask" :
+		{
+			"Image": "Images/circle_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 0.5, 0.5, 1.0],
+				[0.0, 0.5, 0.5, 1.0]
+			]
+		},
+		
+		"Tessellation": [0.5, 0.5, 0.5, 0.5],
+		"Expansion": [0, 0, 0, 0]
+	},
+	
+	"GridItem_3":
+	{
+		"Mask" :
+		{
+			"Image": "Images/circle_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+
+		"Overlay" :
+		{
+			"Image": "Images/inventory_bubble_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 0.5, 0.5, 1.0],
+				[0.0, 0.5, 0.5, 1.0]
+
+			]
+		},
+		
+		"Tessellation": [0.5, 0.5, 0.5, 0.5],
+		"Expansion": [0, 0, 0, 0]
+	},
+	
+	"Decoration_0":
+	{
+		"Overlay" :
+		{
+			"Image": "Images/bookmark.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 82.0],
+				[0.0, 36.0,  905.0, 985.0]
+
+			]
+		},
+
+		"Tessellation": [50, 16, 0, 55],
+		"Expansion": [10, 20, 0, 55],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [20, 0, 0, 0]
+		}
+	},
+
+	"Decoration_1":
+	{
+		"Overlay" :
+		{
+			"Image": "Images/decoration_1.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 40.0, 40.0, 472.0, 472.0, 512.0],
+				[0.0, 0.0, 128.0, 128.0]
+			]
+		},
+
+		"Tessellation": [20, 0, 20, 0],
+		"CenterTile": [-64.0, 1.0, 64.0, -1.0],
+		"Expansion": [0, 0, 0, 0],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [0, 0, 0, 0]
+		}
+	},
+
+	"FlatGroupBox_0":
+	{
+		"Mask" : "#OVERLAY",
+		"Overlay" :
+		{
+			"Image": "Images/GroupBox_1.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[1.0, 1.0, 0.5, 0.5],
+				[0.5, 1.0, 0.5, 0.5],
+				[0.5, 1.0, 1.0, 0.5],
+
+				[1.0, 0.5, 0.5, 0.5],
+				[0.5, 0.5, 0.5, 0.5],
+				[0.5, 0.5, 1.0, 0.5],
+
+				[1.0, 0.5, 0.5, 1.0],
+				[0.5, 0.5, 0.5, 1.0],
+				[0.5, 0.5, 1.0, 1.0]
+			]
+		},
+
+		"Tessellation": [32, 32, 32, 32],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [20, 20, 20, 20]
+		}
+	},
+
+	"FlatGroupBox_1":
+	{
+		"Mask" : "#OVERLAY",
+		"Overlay" :
+		{
+			"Image": "Images/GroupBox_1.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[1.0, 1.0, 0.5, 0.5],
+				[0.5, 1.0, 0.5, 0.5],
+				[0.5, 1.0, 1.0, 0.5],
+
+				[1.0, 0.5, 0.5, 0.5],
+				[0.5, 0.5, 0.5, 0.5],
+				[0.5, 0.5, 1.0, 0.5],
+
+				[1.0, 0.5, 0.5, 0.0],
+				[0.5, 0.5, 0.5, 0.0],
+				[0.5, 0.5, 1.0, 0.0]
+			]
+		},
+
+		"Tessellation": [32, 32, 32, 32],
+		"BlendMode": "Overlay",
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [14, 14, 14, 14]
+		}
+	},
+
+	"Backing_0":
+	{
+		"Mask" :
+		{
+			"Image": "Images/book_cover_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay":
+		{
+			"Image": "Images/book_cover_overlay.png",
+			"EdgeFill" :  ["TILE", "TILE"],
+			"CenterFill" :  ["TILE", "TILE"],
+
+			"Cells": [
+				[0.0, 145.0, 233.0, 405.0, 496.0, 640.0],
+				[0.0, 146.0, 216.0, 384.0]
+			]
+		},
+
+
+		"Tessellation": [97.0, 97.0, 96.0, 122.0],
+		"CenterTile": [-50.0, 1.0, 50.0, -1.0],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [14, 14, 14, 22]
+		}
+	},
+
+	"Backing_1":
+	{
+		"Overlay":
+		{
+			"Image": "Images/pages.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+
+			"Cells": [
+				[0.0, 0.0, 128.0, 280.0],
+				[128.0, 0.0, 128.0, 280.0],
+				[128.0, 0.0, 128.0, 280.0],
+				[128.0, 0.0, 128.0, 280.0],
+				[128.0, 0.0, 256.0, 280.0],
+
+				[0.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 256.0, 640.0],
+
+				[0.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 256.0, 640.0],
+
+				[0.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 128.0, 640.0],
+				[128.0, 280.0, 256.0, 640.0],
+
+				[0.0, 640.0, 128.0, 768.0],
+				[384.0, 0.0, 256.0, -412.0],
+				[384.0, 412.0, 256.0, 602.0],
+				[512.0, 0.0, -384.0, 412.0],
+				[128.0, 640.0, 256.0, 768.0]
+			]
+		},
+
+
+		"Tessellation": [85.33, 113.33, 85.33, 85.33],
+		"CenterTile": [-32.0, 1.0, 32.0, -1.0],
+		"Expansion": [21.3, 0, 21.3, 21.3],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [32, 0, 32, 0]
+		}
+	},
+
+	"Backing_2":
+	{
+		"Mask" :
+		{
+			"Image": "Images/Backing_1mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 0.0, 196.0, 68.0],
+				[196.0, 0.0, 196.0, 68.0],
+				[117.0, 0.0, 256.0, 68.0],
+
+				[0.0, 68.0, 196.0, 68.0],
+				[196.0, 68.0, 196.0, 68.0],
+				[117.0, 68.0, 256.0, 68.0],
+
+				[0.0, 26.0, 196.0, 194.0],
+				[196.0, 26.0, 196.0, 194.0],
+				[117.0, 26.0, 256.0, 194.0]
+			]
+		},
+		"Overlay":
+		{
+			"Image": "Images/Backing_1.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+
+			"Cells": [
+				[0.0, 0.0, 196.0, 68.0],
+				[196.0, 0.0, 197.0, 68.0],
+				[196.0, 0.0, 335.0, 68.0],
+
+				[0.0, 68.0, 196.0, 400.0],
+				[196.0, 68.0, 196.0, 68.0],
+				[196.0, 68.0, 335.0, 400.0],
+
+				[0.0, 400.0, 196.0, 568.0],
+				[0.0, 602.0, 384.0, 768.0],
+				[196.0, 400.0, 335.0, 568.0]
+			]
+		},
+
+
+		"Tessellation": [130.6, 45.0, 92.6, 112.0],
+		"Expansion": [50.0, 18.0, 30.0, 60.0],
+
+		"Style":
+		{
+			"Padding": [0.0, 0, 0.0, 0],
+			"Margin": [8.0, 0.0, 12.0, 2.0]
+		}
+	},
+
+	"Panel_0_0":
+	{
+		"Mask" :
+		{
+			"Image": "Images/bevel_shadow_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay":
+		{
+			"Image": "Images/bevel_shadow.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+
+			"Cells": [
+				[4.0, 8.0, 44.0, 60.0],
+				[4.0, 8.0, 40.0, 60.0]
+			]
+		},
+
+		"Tessellation": [2.0, 2.0, 10.0, 12.0],
+		"Expansion": [1.0, 1.0, 8, 10]
+	},
+
+	"Panel_0_1":
+	{
+		"Mask" :
+		{
+			"Image": "Images/gold_trim_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 25.5, 18.5, 25.5, 18.5 ]
+		},
+
+		"Overlay" :
+		{
+			"Image": "Images/gold_trim.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[ 0.0, 0.0,  25.5, 25.5],
+				[25.5, 0.0, 466.5, 25.5],
+				[466.5, 0.0,512.0, 25.5],
+
+				[25.5, 97.5, 466.5, 72.0],
+				[1.0, 1.0, 1.0, 1.0],
+				[25.5, 144.0, 466.5, 98.5],
+
+				[ 0.0, 26.5,  25.5, 71.5],
+				[25.5, 26.5, 466.5, 71.5],
+				[466.5,26.5, 512.0, 71.5]
+			]
+		},
+
+		"Tessellation": [16, 16, 28, 28],
+		"Expansion": [0, 0, 14, 14],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [14, 14, 14, 14]
+		}
+	},
+
+	"Panel_0_2":
+	{
+		"Comment": "This is the notebook.",
+		"Mask" :
+		{
+			"Image": "Images/panel_3_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+
+		"Overlay":
+		{
+			"Image": "Images/panel_3.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+
+			"Cells": [
+				[0.0, 67.0, 374.0, 490.0],
+				[0.0, 70.0, 385.0, 480.0]
+			]
+		},
+		"Tessellation": [24.0, 23.3, 77.3, 63.3],
+		"Expansion": [14, 8, 10, 14],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [8, 12, 8, 24]
+		}
+	},
+
+	"Panel_0_3":
+	{
+		"Comment":"reused grid item for semantic clarity",
+		"Mask" :
+		{
+			"Image": "Images/item_frame_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+
+		"Overlay" :
+		{
+			"Image": "Images/item_frame_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[2.0, 12.0, 51.0, 61.0],
+				[3.0, 13.0, 51.0, 61.0]
+
+			]
+		},
+
+
+		"Tessellation": [6, 6, 6, 6],
+		"Expansion": [0, 0, 0, 0],
+
+		"Style":
+		{
+			"Padding": [1, 1, 1, 1],
+			"Margin": [3, 3, 3, 3]
+		}
+	},
+
+
+	"Panel_1_0":
+	{
+		"Mask" :
+		{
+			"Image": "Images/paper_mask_0.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay" :
+		{
+			"Image": "Images/paper_panel_0.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[16.0, 0.0,  64.5, 64.0],
+				[179.5, 64.0, -116.0,  448.0],
+				[65.5, 0.0, 106.0, 64.0],
+
+				[16.0, 64.0, 64.5, 448.0],
+				[65.0, 256.0, 65.0, 256.0],
+				[65.5, 64.0, 106.0, 448.0],
+
+				[16.0, 448.0, 64.5, 512.0],
+				[242.0, 64.0, -180.5, 448.0],
+				[65.5, 448.0, 106.0, 512.0]
+			]
+		},
+
+		"Tessellation": [33.6, 44.4, 29.4, 44.4],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [12, 12, 12, 14]
+		}
+	},
+
+	"Panel_1_1":
+	{
+		"Mask" :
+		{
+			"Image": "Images/scroll_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+
+		"Overlay" :
+		{
+			"Image": "Images/scroll_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[10.0, 0.0,  38.0, 20.0],
+				[38.0, 0.0, 471.0, 20.0],
+				[471.0, 0.0, 502.0, 20.0],
+
+				[0.0, 145.0, 512.0, 127.0],
+				[256.0, 20.0, 65.0, 20.0],
+				[0.0, 187.0, 512.0, 156.0],
+
+
+				[10.0, 26.5,  38.0, 126.0],
+				[38.0, 26.5, 471.0, 126.0],
+				[471.0,26.5, 502.0, 126.0]
+			]
+		},
+
+		"Tessellation": [16.0, 8.0, 16, 48.0],
+		"Expansion": [6, 6, 6, 6],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [8, 8, 8, 20]
+		}
+	},
+
+	"Panel_1_2":
+	{
+		"Mask" :
+		{
+			"Image": "Images/torn_paper_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay" :
+		{
+			"Image": "Images/torn_paper_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0, 0, 18, 8],
+				[44, 494, 52, -22],
+				[18, 0, 40, 8],
+
+				[0, 8, 18, 415],
+				[10, 22, 10, 22],
+				[18, 8, 40, 415],
+
+				[0, 415, 18, 512],
+				[52, 494, 149, -22],
+				[475, 30, 497, 740]
+			]
+		},
+
+		"Tessellation": [2.0, 2.0, 2.0, 20.0],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [4, 4, 4, 16]
+		}
+	},
+
+	"Panel_2_0":
+	{
+		"Mask" :
+		{
+			"Image": "Images/page_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 0.0, 116.0, 56.0],
+				[116.0, 0.0, 428.0, 56.0],
+				[428.0, 0.0, 512.0, 56.0],
+
+				[0.0, 420.0, 512.0, 304.0],
+				[64.0, 64.0, 64.0, 64.0],
+				[428.0, 56.0, 512.0, 56.0],
+
+				[0.0, 112.0, 116.0, -208.0],
+				[116.0, 112.0, 428.0, -208.0],
+				[428.0, 112.0, 512.0, -208.0]
+			]
+		},
+
+
+		"Overlay":
+		{
+			"Image": "Images/book_page_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+
+			"Cells": [
+				[0.0, 0.0, 0.0, 0.0],
+				[0.0, 0.0, 0.0, 0.0],
+				[104.0, 0.0, 188.0, 56.0],
+
+				[0.0, 0.0, 0.0, 0.0],
+				[0.0, 0.0, 0.0, 0.0],
+				[104.0, 56.0, 188.0, 56.0],
+
+				[0.0, 0.0, 0.0, 0.0],
+				[0.0, 0.0, 0.0, 0.0],
+				[104.0, 160.0, 188.0, 256.0]
+			]
+		},
+		"Tessellation": [77.3, 37.3, 56.0, 101.3],
+		"Expansion": [2, 12, 2, 14],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [8, 8, 8, 24]
+		}
+	},
+
+	"Panel_2_1":
+	{
+		"Mask" :
+		{
+			"Image": "Images/page_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[428.0, 56.0, -512.0, -112.0],
+				[116.0, 56.0, -428.0, -112.0],
+				[0.0, 56.0, -116.0, -112.0],
+
+				[428.0, 56.0, -512.0, 56.0],
+				[64.0, 64.0, 64.0, 64.0],
+				[0.0, 453.0, 512.0, 337.0],
+
+				[428.0, 208.0, -512.0, 304.0],
+				[116.0, 208.0, -428.0, 304.0],
+				[0.0, 208.0, -116.0, 304.0]
+			]
+		},
+		"Overlay":
+		{
+			"Image": "Images/book_page_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+
+			"Cells": [
+				[188.0, 0.0, 272.0, 56.0],
+				[0.0, 0.0, 0.0, 0.0],
+				[0.0, 0.0, 0.0, 0.0],
+
+				[188.0, 56.0, 272.0, 56.0],
+				[0.0, 0.0, 0.0, 0.0],
+				[0.0, 0.0, 0.0, 0.0],
+
+
+				[188.0, 160.0, 272.0, 256.0],
+				[0.0, 0.0, 0.0, 0.0],
+				[0.0, 0.0, 0.0, 0.0]
+			]
+		},
+
+		"Tessellation": [56.0, 37.3, 77.3, 101.3],
+		"Expansion": [2, 12, 2, 14],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [8, 8, 8, 24]
+		}
+	},
+
+	"Panel_2_2":
+	{
+		"Mask" :
+		{
+			"Image": "Images/scroll_page_mask.png",
+			"EdgeFill" :  ["STRETCH", "TILE"],
+			"CenterFill" :  ["STRETCH", "TILE"],
+			"Cells": "#COPY"
+		},
+		"Overlay" :
+		{
+			"Image": "Images/scroll_page_border.png",
+			"EdgeFill" :  ["STRETCH", "TILE"],
+			"CenterFill" :  ["STRETCH", "TILE"],
+			"Cells": [
+				[0, 0, 65, 3],
+				[65, 0, 65, 3],
+				[65, 0, 157, 3],
+
+				[0, 3, 65, 453],
+				[65, 3, 65, 3],
+				[65, 3, 157, 453],
+
+				[0, 453, 65, 512],
+				[65, 453, 65, 512],
+				[65, 453, 157, 512]
+				
+			]
+		},
+
+		"Tessellation": [44.0, 2.0, 61.33, 39.0],
+		"Expansion": [0, 0, 32, 37.0],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [8, 8, 8, 8]
+		}
+	},
+
+	"DecorativeGroupBox_1_0":
+	{
+		"Overlay" :
+		{
+			"Image": "Images/GroupBox_2.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 0.0, 117.0, 123.0],
+				[122.0, 124.0, 180.0, 2.0],
+				[0.0, 0.0, -117.0, 123.0],
+
+				[0.0, 185.0, 125.0, 123.0],
+				[64.0, 64.0, 64.0, 64.0],
+				[0.0, -185.0, 125.0, -123.0],
+
+				[0.0, 0.0, 117.0, -123.0],
+				[122.0, 124.0, -180.0, 2.0],
+				[0.0, 0.0, -117.0, -123.0]
+			]
+		},
+
+		"Tessellation": [32, 32, 0, 32],
+
+		"Style":
+		{
+			"Padding": [8, 8, 8, 8],
+			"Margin": [12, 12, 12, 12]
+		}
+	},
+
+	"FlatGroupBox_1_0":
+	{
+		"Mask" :
+		{
+			"Image": "Images/FlatGroupBox_overlay_345.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay" :
+		{
+			"Image": "Images/FlatGroupBox_3.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 18.0, 46.0, 64.0],
+				[0.0, 18.0, 46.0, 64.0]
+			]
+		},
+
+		"Tessellation": [12, 12, 12, 12],
+
+		"Style":
+		{
+			"Margin": [6, 6, 6, 6]
+		}
+	},
+
+
+	"FlatGroupBox_1_1":
+	{
+		"Mask" :
+		{
+			"Image": "Images/FlatGroupBox_overlay_345.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay" :
+		{
+			"Image": "Images/FlatGroupBox_4.png",
+			"EdgeFill" :  ["CENTER", "CENTER"],
+			"CenterFill" :  ["CENTER", "CENTER"],
+			"Cells": [
+				[0.0, 18.0, 46.0, 64.0],
+				[0.0, 18.0, 46.0, 64.0]
+			]
+		},
+
+		"Tessellation": [12, 12, 12, 12],
+
+		"Style":
+		{
+			"Margin": [6, 6, 6, 6]
+		}
+	},
+
+	"FlatGroupBox_1_2":
+	{
+		"Mask" :
+		{
+			"Image": "Images/FlatGroupBox_overlay_345.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": "#COPY"
+		},
+		"Overlay" :
+		{
+			"Image": "Images/FlatGroupBox_5.png",
+			"EdgeFill" :  ["CENTER", "CENTER"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 18.0, 46.0, 64.0],
+				[0.0, 18.0, 46.0, 64.0]
+			]
+		},
+
+		"Tessellation": [12, 12, 12, 12],
+
+		"Style":
+		{
+			"Margin": [6, 6, 6, 6]
+		}
+	},
+
+	"FlatGroupBox_1_3":
+	{
+		"Overlay" :
+		{
+			"Image": "Images/paper 3.png",
+			"EdgeFill" :  ["CENTER", "CENTER"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 56.0, 200.0, 256.0],
+				[0.0, 90.0, 166.0, 256.0]
+			]
+		},
+
+		"Tessellation": [16, 28, 16, 28],
+
+		"Style":
+		{
+			"Margin": [8, 8, 8, 8]
+		}
+	},
+
+	"FlatGroupBox_2_0":
+	{
+		"Overlay" :
+		{
+			"Image": "Images/FlatGroupBox_3_square.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 18.0, 46.0, 64.0],
+				[0.0, 18.0, 46.0, 64.0]
+			]
+		},
+
+		"Tessellation": [12, 12, 12, 12],
+
+		"Style":
+		{
+			"Margin": [0, 0, 0, 0]
+		}
+	},
+
+
+	"FlatGroupBox_2_1":
+	{
+		"Overlay" :
+		{
+			"Image": "Images/FlatGroupBox_4_square.png",
+			"EdgeFill" :  ["CENTER", "CENTER"],
+			"CenterFill" :  ["CENTER", "CENTER"],
+			"Cells": [
+				[0.0, 18.0, 46.0, 64.0],
+				[0.0, 18.0, 46.0, 64.0]
+			]
+		},
+
+		"Tessellation": [12, 12, 12, 12],
+
+		"Style":
+		{
+			"Margin": [0, 0, 0, 0]
+		}
+	},
+
+	"FlatGroupBox_2_2":
+	{
+		"Overlay" :
+		{
+			"Image": "Images/FlatGroupBox_5_square.png",
+			"EdgeFill" :  ["CENTER", "CENTER"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [
+				[0.0, 18.0, 46.0, 64.0],
+				[0.0, 18.0, 46.0, 64.0]
+			]
+		},
+
+		"Tessellation": [12, 12, 12, 12],
+
+		"Style":
+		{
+			"Margin": [0, 0, 0, 0]
+		}
+	},
+
+	"Slider_0":
+	{
+		"Mask" :
+		{
+			"Image": "Images/circle_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+		"Overlay" :
+		{
+			"Image": "Images/circle_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+
+		"Tessellation": [12, 12, 12, 12],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [0, 0, 0, 0],
+			"MinSize": [8, 8]
+		}
+	},
+
+	"Slider_1":
+	{
+		"Mask" :
+		{
+			"Image": "Images/circle_mask.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+		"Overlay" :
+		{
+			"Image": "Images/circle_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+
+
+
+		"Tessellation": [4, 4, 4, 4],
+		"Expansion": [0.5, 0.5, 0.5, 0.5],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [1.5, 1.5, 1.5, 1.5],
+			"MinSize": [6, 6]
+		}
+	},
+
+	"IndentGroupBox_0":
+	{
+		"Mask" : "#OVERLAY",
+		"Overlay" :
+		{
+			"Image": "Images/lowered_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+
+		"Tessellation": [16, 16, 16, 16],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [8, 8, 8, 8]
+		}
+	},
+
+	"IndentGroupBox_1":
+	{
+		"Mask" : "#OVERLAY",
+		"Overlay" :
+		{
+			"Image": "Images/lowered_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+
+		"Tessellation": [8, 8, 8, 8],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [4, 4, 4, 4]
+		}
+	},
+
+	"RaisedGroupBox_0":
+	{
+		"Mask" : "#OVERLAY",
+		"Overlay" :
+		{
+			"Image": "Images/raised_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+
+		"Tessellation": [16, 16, 16, 16],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [8, 8, 8, 8]
+		}
+	},
+
+	"RaisedGroupBox_1":
+	{
+		"Mask" : "#OVERLAY",
+		"Overlay" :
+		{
+			"Image": "Images/raised_border.png",
+			"EdgeFill" :  ["STRETCH", "STRETCH"],
+			"CenterFill" :  ["STRETCH", "STRETCH"],
+			"Cells": [ 0.5, 0.5, 0.5, 0.5 ]
+		},
+
+		"Tessellation": [8, 8, 8, 8],
+
+		"Style":
+		{
+			"Padding": [0, 0, 0, 0],
+			"Margin": [4, 4, 4, 4]
+		}
+	}
+}
