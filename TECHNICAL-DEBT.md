@@ -29,6 +29,17 @@ design, surfaced by the Task 7 code-quality review. They were NOT applied becaus
   Low blast radius today (names stable); key off image reference / path+dims when reload-same-border
   becomes a real path.
 
+## Properties form (Task 8) — render-on-subscribe focus loss
+
+- `renderPropertiesForm` rebuilds the whole form (`host.innerHTML = ...`) on every `notify()`,
+  so committing an edit (`onchange`) tears down and rebuilds the form, jumping focus to the top.
+  `onchange` (not `oninput`) means mid-typing isn't lost, but sequential field entry is awkward.
+  Same render-on-subscribe debt as the rect editor; address at integration by splitting structural
+  render from per-frame paint, or by preserving/restoring focus across rebuilds.
+- Optional type tightening: `LayerState.edgeFill/centerFill` are `[string, string]`; typing them
+  `[FillMode, FillMode]` (FillMode already exists in types.ts) would remove the `as any` casts in
+  propertiesForm.ts and catch invalid fill values at compile time. Deferred (ripples into state.ts).
+
 ## Deferred view-fit (Task 7 minor)
 
 - Module-level `view` (zoom/pan) is not reset/fit when switching borders; a differently-sized border
