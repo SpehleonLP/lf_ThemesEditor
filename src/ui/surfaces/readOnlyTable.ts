@@ -1,10 +1,23 @@
 // src/ui/surfaces/readOnlyTable.ts
 import type { Surface, SurfaceContext, SurfaceKey } from './registry';
-import type { Namespace } from '../../package/refIndex';
+import type { Namespace, RefIndex } from '../../package/refIndex';
 import type { NavTarget } from '../../package/validate';
 import { buildRows, renderTableList } from '../tableList';
 
 interface TableDef { ns: Namespace; title: string }
+
+export function resolveEntrySelection(
+  index: RefIndex,
+  tables: { ns: Namespace; title: string }[],
+  entry: NavTarget['entry'],
+): { ns: Namespace; name: string } | null {
+  if (!entry?.name) return null;
+  if (entry.ns) return { ns: entry.ns, name: entry.name };
+  for (const t of tables) {
+    if (index.definitions(t.ns).includes(entry.name)) return { ns: t.ns, name: entry.name };
+  }
+  return null;
+}
 
 // Surface config: which namespaces (tables) this file owns, in display order.
 const SURFACE_TABLES: Record<'backgrounds' | 'responseCurves' | 'codingThemes', TableDef[]> = {
@@ -106,7 +119,9 @@ export function createReadOnlyTableSurface(key: 'backgrounds' | 'responseCurves'
     },
     refresh(ctx) { ctxRef = ctx; renderLists(); renderInspector(); },
     reveal(entry) {
-      if (entry?.ns && entry?.name) { selected = { ns: entry.ns, name: entry.name }; renderLists(); renderInspector(); }
+      if (!ctxRef) return;
+      const next = resolveEntrySelection(ctxRef.index, tables, entry);
+      if (next) { selected = next; renderLists(); renderInspector(); }
     },
   };
 }
