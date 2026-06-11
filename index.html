@@ -2,15 +2,69 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Kreatures GUI Borders Editor</title>
+  <title>Kreatures GUI Theme Package Editor</title>
   <style>
-    html, body { margin: 0; height: 100%; font: 13px sans-serif; background: #222; color: #ddd; }
-    #app { display: grid; grid-template-columns: 220px 1fr 340px; height: 100%; }
-    #app > * { overflow: auto; min-width: 0; }
+    html, body { margin: 0; height: 100%; font: 13px 'IBM Plex Sans', sans-serif; background: #0c0c10; color: #ddd; }
+    #app { height: 100%; }
+    .shell { display: grid; grid-template-rows: 52px 1fr; height: 100%; }
+    .tb { display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid #2a2a33; }
+    .tb-name { font: 13px 'JetBrains Mono', monospace; font-weight: 600; }
+    .tb-dirty { width: 8px; height: 8px; border-radius: 50%; background: #e0a84d; }
+    .tb-spacer { flex: 1; }
+    .tb-btn, .tb-status { background: #1a1a22; color: #ddd; border: 1px solid #33333d; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+    .tb-status-err { border-color: #5a2a2a; background: rgba(231,100,97,.12); color: #e76461; }
+    .shell-body { display: grid; grid-template-columns: 212px 1fr; min-height: 0; position: relative; }
+    .nav { border-right: 1px solid #2a2a33; padding: 8px 0; overflow: auto; }
+    .nav-row { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: none; color: #ccc; padding: 7px 12px; cursor: pointer; }
+    .nav-active { background: rgba(140,120,220,.14); border-left: 2px solid #8c78dc; }
+    .nav-label { flex: 1; text-align: left; }
+    .nav-badge { font: 11px 'JetBrains Mono', monospace; opacity: .7; }
+    .nav-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .nav-error { background: #e76461; } .nav-warning { background: #e0a84d; } .nav-notice { background: #888; }
+    .host-stack { position: relative; min-width: 0; overflow: auto; }
+    .surface-host { height: 100%; }
+    .borders-surface { display: grid; grid-template-columns: 220px 1fr 340px; height: 100%; }
+    .borders-surface > * { overflow: auto; min-width: 0; }
+    .ro-surface, .as-surface { display: grid; grid-template-columns: 1fr 320px; height: 100%; }
+    .ro-list, .as-main { overflow: auto; border-right: 1px solid #2a2a33; }
+    .ro-inspector { overflow: auto; padding: 10px; }
+    .tl-header { padding: 6px 10px; font-weight: 600; border-bottom: 1px solid #23232b; }
+    .tl-count { opacity: .6; font: 11px 'JetBrains Mono', monospace; }
+    .tl-row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; cursor: pointer; }
+    .tl-active { background: rgba(140,120,220,.14); }
+    .tl-name { flex: 1; font: 12px 'JetBrains Mono', monospace; }
+    .tl-dead { font-size: 10px; border: 1px dashed #555; border-radius: 3px; padding: 0 4px; opacity: .6; }
+    .tl-refs { font: 11px 'JetBrains Mono', monospace; color: #8c78dc; }
+    .ro-kicker { font-size: 10px; letter-spacing: .08em; opacity: .6; }
+    .ro-name { font: 14px 'JetBrains Mono', monospace; margin: 4px 0 10px; }
+    .ro-refhead { font-size: 11px; opacity: .7; margin: 8px 0 4px; }
+    .ro-refrow, .as-missing-row { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: 12px; }
+    .ro-go, .issue-go, .as-go { background: none; border: 1px solid #33333d; border-radius: 3px; color: #8c78dc; cursor: pointer; font-size: 11px; }
+    .ro-empty { padding: 12px; opacity: .6; }
+    .as-tabs { display: flex; gap: 6px; padding: 8px; }
+    .as-tab { background: #1a1a22; border: 1px solid #33333d; color: #ccc; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+    .as-active { background: rgba(140,120,220,.14); }
+    .as-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 8px; padding: 8px; }
+    .as-card { border: 1px solid #2a2a33; border-radius: 6px; padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+    .as-error { border-color: #5a2a2a; background: rgba(231,100,97,.08); }
+    .as-selected { outline: 1px solid #8c78dc; }
+    .as-fmt { font: 10px 'JetBrains Mono', monospace; align-self: flex-start; padding: 0 4px; border-radius: 3px; background: #222; }
+    .as-fmt-webp, .as-fmt-mp3 { color: #e76461; }
+    .as-fn { font: 12px 'JetBrains Mono', monospace; }
+    .as-pill { font-size: 11px; opacity: .8; }
+    .as-status { padding: 6px 0; }
+    .drawer { position: absolute; right: 0; top: 0; height: 100%; width: 380px; background: #14141a; border-left: 1px solid #2a2a33; overflow: auto; z-index: 40; }
+    .drawer-head { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #2a2a33; }
+    .drawer-head button { background: none; border: none; color: #ccc; cursor: pointer; }
+    .drawer-group { padding: 6px 10px; font-weight: 600; text-transform: capitalize; }
+    .drawer-error { color: #e76461; } .drawer-warning { color: #e0a84d; } .drawer-notice { color: #999; }
+    .issue-card { padding: 8px 10px; border-bottom: 1px solid #1f1f27; }
+    .issue-cat { font: 10px 'JetBrains Mono', monospace; opacity: .6; }
+    .issue-msg { font-size: 12px; margin: 3px 0; }
   </style>
 </head>
 <body>
-  <div id="app"><nav id="border-list"></nav><main id="editor"></main><aside id="props-col"><div id="props"></div><div id="preview-host"></div><div id="export-host"></div></aside></div>
-  <script type="module" src="/src/ui/main.ts"></script>
+  <div id="app"></div>
+  <script type="module" src="/src/ui/boot.ts"></script>
 </body>
 </html>
