@@ -7,6 +7,7 @@ import { createSchemaValidators, runValidators, type Issue, type SchemaTexts } f
 import { createShell } from './shell';
 import { createBordersSurface } from './surfaces/borders';
 import { createReadOnlyTableSurface } from './surfaces/readOnlyTable';
+import { createCodingThemesSurface } from './surfaces/codingThemes';
 import { createAssetsSurface } from './surfaces/assets';
 import type { Surface, SurfaceContext } from './surfaces/registry';
 
@@ -47,7 +48,7 @@ async function boot(): Promise<void> {
     createBordersSurface(pkg.files.borders, scheduleRevalidate),
     createReadOnlyTableSurface('backgrounds', 'Backgrounds', '◧'),
     createReadOnlyTableSurface('responseCurves', 'Response Curves', '◠'),
-    createReadOnlyTableSurface('codingThemes', 'Coding Themes', '◑'),
+    createCodingThemesSurface(pkg.files.codingThemes, scheduleRevalidate),
     createAssetsSurface(),
   ];
 

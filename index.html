@@ -61,6 +61,38 @@
     .issue-card { padding: 8px 10px; border-bottom: 1px solid #1f1f27; }
     .issue-cat { font: 10px 'JetBrains Mono', monospace; opacity: .6; }
     .issue-msg { font-size: 12px; margin: 3px 0; }
+    /* Coding Themes surface */
+    .ct-surface { display: grid; grid-template-columns: 390px 1fr; height: 100%; }
+    .ct-palette { overflow: auto; border-right: 1px solid #2a2a33; padding: 4px 0; }
+    .ct-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; }
+    .ct-title { font-weight: 600; }
+    .ct-seg { display: flex; border: 1px solid #33333d; border-radius: 4px; overflow: hidden; }
+    .ct-seg-btn { background: #1a1a22; border: none; color: #ccc; padding: 4px 12px; cursor: pointer; font: 12px 'JetBrains Mono', monospace; }
+    .ct-seg-on { background: rgba(140,120,220,.22); color: #fff; }
+    .ct-note { margin: 0 12px 8px; font-size: 11px; opacity: .6; line-height: 1.4; }
+    .ct-row { display: flex; align-items: center; gap: 8px; padding: 4px 12px; }
+    .ct-row-unset { opacity: .85; }
+    .ct-swatch { width: 24px; height: 24px; padding: 0; border: 1px solid #33333d; border-radius: 4px; background: none; cursor: pointer; }
+    .ct-add { width: 24px; height: 24px; border: 1px dashed #4a4a55; border-radius: 4px; background: repeating-conic-gradient(#1a1a22 0% 25%, #14141a 0% 50%) 50% / 10px 10px; color: #888; cursor: pointer; }
+    .ct-name { flex: 1; font: 12px 'JetBrains Mono', monospace; }
+    .ct-name-muted { opacity: .55; }
+    .ct-hex { font: 11px 'JetBrains Mono', monospace; opacity: .6; }
+    .ct-default { font-size: 10px; border: 1px dashed #555; border-radius: 3px; padding: 0 4px; opacity: .6; }
+    .ct-alpha { width: 22px; height: 22px; border: 1px solid #33333d; border-radius: 4px; background: #1a1a22; color: #777; cursor: pointer; text-decoration: line-through; }
+    .ct-alpha-on { background: rgba(140,120,220,.22); color: #cbb8ff; text-decoration: none; }
+    .ct-unset { width: 22px; height: 22px; border: 1px solid #33333d; border-radius: 4px; background: #1a1a22; color: #888; cursor: pointer; }
+    .ct-sample { display: grid; grid-template-rows: 42px 1fr; min-width: 0; }
+    .ct-samplehead { display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid #2a2a33; }
+    .ct-kick { font-size: 11px; letter-spacing: .06em; opacity: .7; }
+    .ct-tag { font: 11px 'JetBrains Mono', monospace; opacity: .5; }
+    .ct-pane { overflow: auto; background: var(--ct-Background); }
+    .ct-code { margin: 0; padding: 8px 0; font: 13px/1.55 'JetBrains Mono', monospace; }
+    .ct-line { display: flex; align-items: baseline; }
+    .ct-curline { background: var(--ct-Line); }
+    .ct-mark { width: 3px; align-self: stretch; flex: none; }
+    .ct-lnum { width: 34px; text-align: right; padding-right: 10px; flex: none; color: var(--ct-LineNumber); opacity: .8; user-select: none; }
+    .ct-text { color: var(--ct-Text); white-space: pre; }
+    .ct-err { text-decoration: wavy underline var(--ct-Warnings); text-underline-offset: 3px; }
   </style>
 </head>
 <body>
