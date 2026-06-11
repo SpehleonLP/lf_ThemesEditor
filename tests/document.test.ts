@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { parseDocument, serializeDocument } from '../src/document';
+import { parseDocument, serializeDocument, wrapBordersRoot } from '../src/document';
 import { isValidBorderName } from '../src/borderNames';
 
 const fixture = () => readFile('tests/fixtures/borders.json', 'utf-8');
@@ -28,4 +28,15 @@ test('border name validation mirrors the enum patterns', () => {
     expect(isValidBorderName(ok), ok).toBe(true);
   for (const bad of ['FlatGroupBox_0', 'Window_4', 'Backing_3', 'Panel_4_0', 'window_0', 'BlendMode'])
     expect(isValidBorderName(bad), bad).toBe(false);
+});
+
+test('wrapBordersRoot shares the passed object and lists names', () => {
+  const root = { Window_0: {}, Button_1: {} };
+  const doc = wrapBordersRoot(root);
+  expect(doc.root).toBe(root);                 // SAME object — edits propagate to the package model
+  expect(doc.names).toEqual(['Window_0', 'Button_1']);
+});
+
+test('wrapBordersRoot still rejects numeric keys', () => {
+  expect(() => wrapBordersRoot({ '0': {} })).toThrow(/numeric border key/);
 });

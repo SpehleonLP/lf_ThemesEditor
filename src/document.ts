@@ -6,14 +6,17 @@ export interface BordersDoc {
   names: string[];
 }
 
-export function parseDocument(text: string): BordersDoc {
-  const root = JSON.parse(text) as Record<string, any>;
+export function wrapBordersRoot(root: Record<string, any>): BordersDoc {
   for (const k of Object.keys(root)) {
     if (/^[0-9]+$/.test(k)) {
       throw new Error(`numeric border key "${k}": JS object key-order rules would reorder it; not supported by this editor`);
     }
   }
   return { root, names: Object.keys(root) };
+}
+
+export function parseDocument(text: string): BordersDoc {
+  return wrapBordersRoot(JSON.parse(text) as Record<string, any>);
 }
 
 export function serializeDocument(doc: BordersDoc): string {

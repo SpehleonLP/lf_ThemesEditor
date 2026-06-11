@@ -1,0 +1,143 @@
+// src/package/validate.ts
+import Ajv, { type ValidateFunction } from 'ajv';
+import type { PackageDoc, FileKey } from './model';
+import type { RefIndex, Namespace } from './refIndex';
+import type { AssetList } from './assets';
+
+export type Severity = 'error' | 'warning' | 'notice';
+
+export interface NavTarget { surface: FileKey | 'assets'; entry?: { ns?: Namespace; name?: string; slot?: string } }
+
+export interface Issue {
+  severity: Severity;
+  category: string; // 'schema' | 'dangling-ref' | 'dead-entry' | 'asset' | 'missing-file' | 'texcoord-timefactor' | 'load-error'
+  message: string;
+  file: FileKey | 'assets';
+  jsonPath?: (string | number)[];
+  nav?: NavTarget;
+}
+
+export type SchemaTexts = Record<FileKey, object>;
+export type SchemaValidators = Record<FileKey, ValidateFunction>;
+
+export function createSchemaValidators(schemas: SchemaTexts): SchemaValidators {
+  const ajv = new Ajv({ strict: false, allErrors: true });
+  return {
+    borders: ajv.compile(schemas.borders),
+    backgrounds: ajv.compile(schemas.backgrounds),
+    responseCurves: ajv.compile(schemas.responseCurves),
+    codingThemes: ajv.compile(schemas.codingThemes),
+  };
+}
+
+const FILE_KEYS: FileKey[] = ['borders', 'backgrounds', 'responseCurves', 'codingThemes'];
+
+// Human label per namespace, for messages.
+const NS_LABEL: Record<Namespace, string> = {
+  'bg:gradients': 'Gradient', 'bg:texcoords': 'TexCoord',
+  'rc:events': 'Event', 'rc:splines1d': '1D Spline', 'rc:splines2d': '2D Spline',
+  'rc:gradients': 'Gradient', 'rc:sounds': 'Sound Effect',
+  'asset:image': 'image', 'asset:sound': 'sound',
+};
+
+type Validator = (pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators) => Issue[];
+
+// 1. schema — ajv per file, with the unknown-key → notice downgrade.
+const schemaValidator: Validator = (pkg, _index, _assets, schemas) => {
+  const out: Issue[] = [];
+  for (const file of FILE_KEYS) {
+    const doc = pkg.files[file];
+    if (doc.loadError || doc.missing) continue; // handled by other validators; never schema-check an unread file
+    const validate = schemas[file];
+    if (validate(doc.root)) continue;
+    for (const err of validate.errors ?? []) {
+      const unknownKey = err.keyword === 'additionalProperties';
+      const extra = unknownKey ? ` (unknown key "${(err.params as any).additionalProperty}" — silently ignored by the engine)` : '';
+      const path = err.instancePath ? err.instancePath.split('/').filter(Boolean) : [];
+      out.push({
+        severity: unknownKey ? 'notice' : 'error',
+        category: 'schema',
+        message: `${err.instancePath || '(root)'} ${err.message}${extra}`,
+        file, jsonPath: path, nav: { surface: file },
+      });
+    }
+  }
+  return out;
+};
+
+// 2. dangling-ref — name namespaces only (asset dangles are owned by the asset validator).
+const danglingValidator: Validator = (_pkg, index) =>
+  index.dangling().map((e) => ({
+    severity: 'error' as const,
+    category: 'dangling-ref',
+    message: `${NS_LABEL[e.to.ns]} "${e.to.name}" is referenced but not defined — the build will silently drop this.`,
+    file: e.from.file,
+    jsonPath: e.from.jsonPath,
+    nav: { surface: e.from.file, entry: { ns: e.to.ns, name: e.to.name } },
+  }));
+
+// 3. dead-entry — defined names with zero consumers.
+const NAME_NAMESPACES: Namespace[] = ['bg:gradients', 'bg:texcoords', 'rc:events', 'rc:splines1d', 'rc:splines2d', 'rc:gradients', 'rc:sounds'];
+const NS_FILE: Record<string, FileKey> = {
+  'bg:gradients': 'backgrounds', 'bg:texcoords': 'backgrounds',
+  'rc:events': 'responseCurves', 'rc:splines1d': 'responseCurves', 'rc:splines2d': 'responseCurves',
+  'rc:gradients': 'responseCurves', 'rc:sounds': 'responseCurves',
+};
+const deadEntryValidator: Validator = (_pkg, index) =>
+  NAME_NAMESPACES.flatMap((ns) =>
+    index.dead(ns).map((name) => ({
+      severity: 'notice' as const,
+      category: 'dead-entry',
+      message: `${NS_LABEL[ns]} "${name}" is defined but unreferenced — it won't be packed.`,
+      file: NS_FILE[ns],
+      nav: { surface: NS_FILE[ns], entry: { ns, name } },
+    })),
+  );
+
+// 4. assets — referenced-but-missing (error), rejected format (error), unreferenced eligible (notice).
+const assetsValidator: Validator = (_pkg, _index, assets) => {
+  const out: Issue[] = [];
+  for (const m of assets.missing) {
+    out.push({ severity: 'error', category: 'asset', message: `Referenced ${m.kind} "${m.name}" is missing on disk — the build will silently drop it.`, file: 'assets', nav: { surface: 'assets' } });
+  }
+  for (const a of [...assets.images, ...assets.sounds]) {
+    if (a.status === 'rejected-format') {
+      out.push({ severity: 'error', category: 'asset', message: `"${a.path}" uses rejected format .${a.ext} — the engine refuses it.`, file: 'assets', nav: { surface: 'assets' } });
+    } else if (a.status === 'unreferenced') {
+      out.push({ severity: 'notice', category: 'asset', message: `"${a.path}" is an eligible ${a.kind} but is unreferenced — it won't be packed.`, file: 'assets', nav: { surface: 'assets' } });
+    }
+  }
+  return out;
+};
+
+// 5. texcoord-timefactor — nonzero timeFactor is a known shader int/float bug.
+const timeFactorValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const tc = pkg.files.backgrounds.root?.TexCoords;
+  if (tc && typeof tc === 'object') {
+    for (const name of Object.keys(tc)) {
+      const v = tc[name]?.timeFactor;
+      if (typeof v === 'number' && v !== 0) {
+        out.push({ severity: 'warning', category: 'texcoord-timefactor', message: `TexCoord "${name}" has timeFactor ${v} — only 0 is reliable (shader int/float bug).`, file: 'backgrounds', jsonPath: ['TexCoords', name, 'timeFactor'], nav: { surface: 'backgrounds', entry: { ns: 'bg:texcoords', name } } });
+      }
+    }
+  }
+  return out;
+};
+
+// 0. load/missing-file housekeeping (runs first; loadError files are excluded from schema check above).
+const fileStateValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  for (const file of FILE_KEYS) {
+    const doc = pkg.files[file];
+    if (doc.loadError) out.push({ severity: 'error', category: 'load-error', message: `${doc.path} could not be parsed: ${doc.loadError}. It is read-only and will not be saved.`, file, nav: { surface: file } });
+    else if (doc.missing) out.push({ severity: 'notice', category: 'missing-file', message: `${doc.path} does not exist yet — it will be created on first save.`, file, nav: { surface: file } });
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, timeFactorValidator];
+
+export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
+  return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));
+}
