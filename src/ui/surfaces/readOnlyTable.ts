@@ -20,7 +20,7 @@ export function resolveEntrySelection(
 }
 
 // Surface config: which namespaces (tables) this file owns, in display order.
-const SURFACE_TABLES: Record<'backgrounds' | 'responseCurves' | 'codingThemes', TableDef[]> = {
+const SURFACE_TABLES: Record<'backgrounds' | 'responseCurves', TableDef[]> = {
   backgrounds: [
     { ns: 'bg:texcoords', title: 'TexCoords' },
     { ns: 'bg:gradients', title: 'Gradients' },
@@ -32,10 +32,9 @@ const SURFACE_TABLES: Record<'backgrounds' | 'responseCurves' | 'codingThemes', 
     { ns: 'rc:gradients', title: 'Gradients' },
     { ns: 'rc:sounds', title: 'Sound Effects' },
   ],
-  codingThemes: [], // no name namespaces — see note below
 };
 
-export function createReadOnlyTableSurface(key: 'backgrounds' | 'responseCurves' | 'codingThemes', label: string, icon: string): Surface {
+export function createReadOnlyTableSurface(key: 'backgrounds' | 'responseCurves', label: string, icon: string): Surface {
   let listHost!: HTMLElement;
   let inspectorHost!: HTMLElement;
   let ctxRef!: SurfaceContext;
@@ -48,9 +47,7 @@ export function createReadOnlyTableSurface(key: 'backgrounds' | 'responseCurves'
     if (!selected) {
       const empty = document.createElement('div');
       empty.className = 'ro-empty';
-      empty.textContent = key === 'codingThemes'
-        ? 'Coding Themes editing arrives in slice 2. This file is read-only here.'
-        : 'Select an entry to see what references it.';
+      empty.textContent = 'Select an entry to see what references it.';
       inspectorHost.appendChild(empty);
       return;
     }
@@ -93,12 +90,6 @@ export function createReadOnlyTableSurface(key: 'backgrounds' | 'responseCurves'
         selected: selected?.ns === t.ns ? selected.name : null,
         onSelect: (name) => { selected = { ns: t.ns, name }; renderLists(); renderInspector(); },
       });
-    }
-    if (tables.length === 0) {
-      const note = document.createElement('div');
-      note.className = 'ro-empty';
-      note.textContent = 'No referenceable tables in slice 1.';
-      listHost.appendChild(note);
     }
   }
 

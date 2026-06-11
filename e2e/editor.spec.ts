@@ -37,3 +37,35 @@ test('shell loads, nav switches surfaces, drawer opens', async ({ page }) => {
   await page.locator('.nav-row[data-surface="assets"]').click();
   await expect(page.locator('.as-grid')).toBeVisible();
 });
+
+test('coding themes: toggle, enable a role, live sample recolors', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.nav-row[data-surface="codingThemes"]').click();
+  await expect(page.locator('.ct-palette')).toBeVisible();
+  await expect(page.locator('.ct-code .ct-line').first()).toBeVisible();
+
+  // Light/Dark toggle flips the active theme.
+  await page.locator('.ct-seg-btn[data-theme="Dark"]').click();
+  await expect(page.locator('.ct-seg-btn[data-theme="Dark"]')).toHaveClass(/ct-seg-on/);
+  await page.locator('.ct-seg-btn[data-theme="Light"]').click();
+  await expect(page.locator('.ct-seg-btn[data-theme="Light"]')).toHaveClass(/ct-seg-on/);
+
+  // The shipping Light theme has no roles set, so Keyword starts unset (＋). Enable it.
+  const kwRow = page.locator('.ct-row[data-role="Keyword"]');
+  const addBtn = kwRow.locator('.ct-add');
+  if (await addBtn.count()) await addBtn.click();
+  const swatch = kwRow.locator('.ct-swatch');
+  await expect(swatch).toBeVisible();
+
+  // Setting the swatch updates the live sample's --ct-Keyword variable immediately.
+  await swatch.evaluate((el) => {
+    (el as HTMLInputElement).value = '#ff0000';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const kwVar = await page.locator('.ct-pane').evaluate((el) =>
+    getComputedStyle(el).getPropertyValue('--ct-Keyword'));
+  expect(kwVar.replace(/\s/g, '')).toContain('255,0,0');
+
+  // The edit marks the package dirty -> global Save enables.
+  await expect(page.locator('.tb-btn', { hasText: 'Save' })).toBeEnabled();
+});
