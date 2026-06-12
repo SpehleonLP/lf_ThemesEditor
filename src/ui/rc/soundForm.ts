@@ -1,6 +1,7 @@
 // src/ui/rc/soundForm.ts
 import { rcState, rcNotify } from '../../rc/state';
 import { fillOptions } from '../options';
+import { playAsset } from '../audio';
 import type { RcFormDeps } from './types';
 
 const RANGES = ['tone', 'speed', 'volume'] as const;
@@ -16,7 +17,15 @@ export function mountSoundForm(h: HTMLElement, d: RcFormDeps): void {
   fileRow.append(span('file'));
   const fileSel = document.createElement('select'); fileSel.dataset.k = 'file';
   fileSel.addEventListener('change', () => { const s = soundOf(); if (!s) return; s.file = fileSel.value; deps!.markDirty(); rcNotify(); });
-  fileRow.appendChild(fileSel); fs.appendChild(fileRow);
+  fileRow.appendChild(fileSel);
+  const play = document.createElement('button'); play.className = 'rc-play'; play.textContent = '▶'; play.title = 'Play (randomized in authored ranges)'; play.setAttribute('aria-label', 'Play');
+  play.addEventListener('click', (e) => {
+    e.preventDefault();
+    const s = soundOf();
+    if (s?.file) playAsset(s.file, { tone: Array.isArray(s.tone) ? s.tone : undefined, speed: Array.isArray(s.speed) ? s.speed : undefined, volume: Array.isArray(s.volume) ? s.volume : undefined });
+  });
+  fileRow.appendChild(play);
+  fs.appendChild(fileRow);
 
   for (const key of RANGES) {
     const row = document.createElement('label'); row.className = 'rc-slot';
