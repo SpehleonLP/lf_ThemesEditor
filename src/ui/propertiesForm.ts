@@ -4,6 +4,15 @@ import type { FillMode } from '../types';
 
 const FILLS = ['STRETCH', 'TILE', 'SNAP', 'FLEXIBLE', 'CENTER'];
 
+// One-line description per fill mode, shown under the EdgeFill/CenterFill selects. SNAP verbatim.
+const FILL_DESC: Record<string, string> = {
+  STRETCH: "Stretches the band's pixels to fill the available space.",
+  TILE: 'Repeats the band at native size to fill the space.',
+  FLEXIBLE: 'Grows only as needed; otherwise keeps native size.',
+  CENTER: 'Draws the band at native size, centered.',
+  SNAP: 'Reserved — renders as stretch.',
+};
+
 // Module-level reference to the mounted host so updateGeometryFields can find fields.
 let _host: HTMLElement | null = null;
 
@@ -13,15 +22,18 @@ export function mountGeometryFields(host: HTMLElement): void {
 
   host.innerHTML = `
     <h3 data-field="heading" style="margin:8px"></h3>
+    <div data-field="dockNote" style="margin:0 8px 4px;font-size:11px;opacity:0.55">Preview readout — edits here drive the preview; canvas drags read back here.</div>
     <div style="padding:8px;display:grid;gap:6px">
       <label>EdgeFill x/y:
         <select data-fill="edge0">${FILLS.map((f) => `<option>${f}</option>`).join('')}</select>
         <select data-fill="edge1">${FILLS.map((f) => `<option>${f}</option>`).join('')}</select>
       </label>
+      <div data-desc="edge" style="font-size:11px;opacity:0.6;margin:-2px 0 2px"></div>
       <label>CenterFill x/y:
         <select data-fill="center0">${FILLS.map((f) => `<option>${f}</option>`).join('')}</select>
         <select data-fill="center1">${FILLS.map((f) => `<option>${f}</option>`).join('')}</select>
       </label>
+      <div data-desc="center" style="font-size:11px;opacity:0.6;margin:-2px 0 2px"></div>
       <label>Tessellation (l,t,r,b):
         <input type="number" step="any" data-edge="Tessellation" data-i="0" style="width:60px">
         <input type="number" step="any" data-edge="Tessellation" data-i="1" style="width:60px">
@@ -124,6 +136,14 @@ export function updateGeometryFields(): void {
     const key = s.dataset.fill!;
     if (key in fillValues) s.value = fillValues[key];
   });
+
+  // Fill-mode descriptions for the active edge/center selection. If x and y differ, show both.
+  const describe = (x: string, y: string): string =>
+    x === y ? (FILL_DESC[x] ?? '') : `x: ${FILL_DESC[x] ?? x}  ·  y: ${FILL_DESC[y] ?? y}`;
+  const edgeDesc = _host.querySelector<HTMLElement>('[data-desc="edge"]');
+  const centerDesc = _host.querySelector<HTMLElement>('[data-desc="center"]');
+  if (edgeDesc) edgeDesc.textContent = describe(L.edgeFill[0], L.edgeFill[1]);
+  if (centerDesc) centerDesc.textContent = describe(L.centerFill[0], L.centerFill[1]);
 
   // Numeric inputs — resolve value by traversing the entry path
   _host.querySelectorAll<HTMLInputElement>('input[data-edge]').forEach((inp) => {

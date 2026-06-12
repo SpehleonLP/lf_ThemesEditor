@@ -32,6 +32,7 @@ const view: OverlayView = { zoom: 1, panX: 0, panY: 0 };
 // Cached DOM handles for the mounted stage (cleared on remount).
 let glCanvas: HTMLCanvasElement | null = null;
 let overlayCanvas: HTMLCanvasElement | null = null;
+let mountHost: HTMLElement | null = null; // host element of the current mount (for #pv-w/#pv-h sync)
 
 function layerInput(name: LayerName): PreviewLayer | null {
   const L = state.layers?.[name];
@@ -91,6 +92,7 @@ export function mountPreview(host: HTMLElement): void {
   }
   glCanvas = null;
   overlayCanvas = null;
+  mountHost = host;
 
   if (!state.doc || !state.selected) {
     host.innerHTML = '';
@@ -145,6 +147,7 @@ export function mountPreview(host: HTMLElement): void {
   });
 
   wireGestures(stage);
+  wireResize();
   wireOverlayDrag();
 
   // Auto-fit on (re)mount before the first draw. Closes the deferred "view fit" debt.
@@ -192,6 +195,105 @@ function wireGestures(stage: HTMLElement): void {
   };
   stage.addEventListener('pointerup', endPan);
   stage.addEventListener('pointercancel', endPan);
+}
+
+// ── Preview viewport resize (VIEW-ONLY) ─────────────────────────────────────────
+// Dragging the layout-rect's bottom-right CORNER (or its right/bottom edge when the Chrome/
+// expansion overlay is OFF) changes the previewed `panel` size in pt. This is PREVIEW state: it
+// only calls updatePreview() and syncs the #pv-w/#pv-h inputs — it NEVER sets state.dirty / notify().
+//
+// Conflict avoidance with Task 3.2 Expansion handles: Expansion owns the layout-rect EDGE MIDPOINTS
+// (drawn when toggles.expansion is on). We therefore put the primary resize handle on the CORNER
+// (never used by Expansion) and only offer edge-resize when expansion is OFF, so the two never collide.
+// Resize is hit-tested BEFORE the expansion hit-test in the overlay pointerdown handler.
+type ResizeKind = 'corner' | 'edge-r' | 'edge-b';
+let resizeKind: ResizeKind | null = null;
+
+// Layout-rect corner in world pt. The layout-rect right edge sits at world x = panel.w + exp.l and
+// bottom at world y = panel.h + exp.t (since qw - exp.r = panel.w + exp.l). Returns the screen-px
+// position of that bottom-right corner plus the expansion insets used to convert a drag back to panel.
+function layoutCornerScreen(): { sx: number; sy: number; exp: Vec4 } | null {
+  const entry = state.doc && state.selected ? state.doc.root[state.selected] : null;
+  if (!entry) return null;
+  const exp = (entry.Expansion ?? [0, 0, 0, 0]) as Vec4;
+  const wx = panel[0] + exp[0]; // layout right edge in world pt
+  const wy = panel[1] + exp[1]; // layout bottom edge in world pt
+  const s = worldToScreen(view, wx, wy);
+  return { sx: s.x, sy: s.y, exp };
+}
+
+const RESIZE_HIT_PX = 8; // a touch larger than the 6px overlay band so the corner is easy to grab
+
+// Hit-test the resize handles at a screen point. Corner takes priority; edges only when Chrome is off.
+function hitResize(sx: number, sy: number): ResizeKind | null {
+  const c = layoutCornerScreen();
+  if (!c) return null;
+  // Bottom-right corner (always available — never collides with expansion midpoints).
+  if (Math.abs(sx - c.sx) <= RESIZE_HIT_PX && Math.abs(sy - c.sy) <= RESIZE_HIT_PX) return 'corner';
+  if (toggles.expansion) return null; // edges belong to Expansion while Chrome is on
+  // Right edge / bottom edge of the layout rect, away from the corner (corner already handled).
+  const exp = c.exp;
+  const topS = worldToScreen(view, 0, exp[1]).y;
+  const leftS = worldToScreen(view, exp[0], 0).x;
+  if (Math.abs(sx - c.sx) <= RESIZE_HIT_PX && sy >= Math.min(topS, c.sy) && sy <= Math.max(topS, c.sy)) return 'edge-r';
+  if (Math.abs(sy - c.sy) <= RESIZE_HIT_PX && sx >= Math.min(leftS, c.sx) && sx <= Math.max(leftS, c.sx)) return 'edge-b';
+  return null;
+}
+
+function cursorForResize(k: ResizeKind): string {
+  return k === 'corner' ? 'nwse-resize' : k === 'edge-r' ? 'ew-resize' : 'ns-resize';
+}
+
+// Apply a resize drag: convert the world point under the cursor to a new panel size and sync inputs.
+function applyResize(k: ResizeKind, wx: number, wy: number, exp: Vec4): void {
+  const MIN = 8;
+  if (k === 'corner' || k === 'edge-r') panel[0] = Math.max(MIN, wx - exp[0]);
+  if (k === 'corner' || k === 'edge-b') panel[1] = Math.max(MIN, wy - exp[1]);
+  const wIn = mountHost?.querySelector<HTMLInputElement>('#pv-w');
+  const hIn = mountHost?.querySelector<HTMLInputElement>('#pv-h');
+  if (wIn) wIn.value = String(Math.round(panel[0]));
+  if (hIn) hIn.value = String(Math.round(panel[1]));
+}
+
+function wireResize(): void {
+  const cv = overlayCanvas;
+  if (!cv) return;
+
+  cv.addEventListener('pointerdown', (e: PointerEvent) => {
+    if (e.button !== 0 || e.shiftKey) return;
+    const s = screenPt(e);
+    const k = hitResize(s.x, s.y);
+    if (!k) return; // no resize handle here → let the overlay/expansion drag or pan handle it
+    e.preventDefault();
+    // stopImmediatePropagation: wireResize registers before wireOverlayDrag on the SAME canvas, so
+    // this prevents the expansion/overlay drag pointerdown (a sibling listener) from also firing.
+    e.stopImmediatePropagation();
+    resizeKind = k;
+    cv.setPointerCapture(e.pointerId);
+  });
+
+  cv.addEventListener('pointermove', (e: PointerEvent) => {
+    const s = screenPt(e);
+    if (!resizeKind) {
+      // Hover feedback: show the resize cursor when over a handle.
+      const k = hitResize(s.x, s.y);
+      cv.style.cursor = k ? cursorForResize(k) : '';
+      return;
+    }
+    const c = layoutCornerScreen();
+    if (!c) return;
+    const wpt = screenToWorld(view, s.x, s.y);
+    applyResize(resizeKind, wpt.x, wpt.y, c.exp);
+    updatePreview(); // VIEW-only: re-render at the new panel size. Do NOT refit (let the user see it grow).
+  });
+
+  const end = (e: PointerEvent) => {
+    if (!resizeKind) return;
+    resizeKind = null;
+    if (cv.hasPointerCapture(e.pointerId)) cv.releasePointerCapture(e.pointerId);
+  };
+  cv.addEventListener('pointerup', end);
+  cv.addEventListener('pointercancel', end);
 }
 
 // ── Overlay edge dragging ──────────────────────────────────────────────────────
