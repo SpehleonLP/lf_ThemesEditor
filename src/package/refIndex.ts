@@ -43,6 +43,13 @@ const RULES: RefRule[] = [
   { file: 'responseCurves', path: ['Sound Effects', '*', 'file'], ns: 'asset:sound' },
 ];
 
+// The entry name a consumer edge belongs to, for reveal()-style navigation.
+// borders edges are rooted at the entry ([name, 'Overlay', 'Image']); every other
+// file roots at the table ([table, name, ...]).
+export function edgeEntryName(e: RefEdge): string {
+  return String((e.from.file === 'borders' ? e.from.jsonPath[0] : e.from.jsonPath[1]) ?? '');
+}
+
 function isRefValue(v: unknown): v is string {
   // empty string = unassigned; '#...' = directive; non-string = wrong type (schema's problem)
   return typeof v === 'string' && v !== '' && !v.startsWith('#');

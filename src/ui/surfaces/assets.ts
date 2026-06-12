@@ -1,6 +1,7 @@
 // src/ui/surfaces/assets.ts
 import type { Surface, SurfaceContext } from './registry';
 import type { AssetEntry } from '../../package/assets';
+import { edgeEntryName } from '../../package/refIndex';
 
 export function createAssetsSurface(): Surface {
   let mainHost!: HTMLElement;
@@ -40,7 +41,7 @@ export function createAssetsSurface(): Surface {
       const row = document.createElement('div'); row.className = 'ro-refrow';
       const lbl = document.createElement('span'); lbl.textContent = e.from.label;
       const go = document.createElement('button'); go.className = 'ro-go'; go.textContent = 'go ↗';
-      go.addEventListener('click', () => ctxRef.navigate({ surface: e.from.file, entry: { name: String(e.from.jsonPath[0] ?? '') } }));
+      go.addEventListener('click', () => ctxRef.navigate({ surface: e.from.file, entry: { name: edgeEntryName(e) } }));
       row.append(lbl, go);
       inspectorHost.appendChild(row);
     }
