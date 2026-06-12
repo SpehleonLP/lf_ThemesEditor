@@ -98,6 +98,34 @@ function rewriteTargets(): LayerName[] {
   return state.linked ? ['mask', 'overlay'] : [state.activeLayer];
 }
 
+// One-shot "mirror from opposite cell" convenience (free mode only). The opposite of the selected
+// [y][x] in the 5×5 grid is [4-y][4-x]. Deep-copies the opposite cell's rect into the selected
+// cell and sets the mirror flag for each CROSSED axis. NOT a persistent link: editing the source
+// later does not change the target. Center [2][2] is its own opposite → no-op (button disabled).
+// Respects state.linked exactly like the mirror-X/Y checkboxes: when linked, applies to BOTH
+// mask and overlay, reading EACH layer's own opposite cell and writing into THAT layer's target.
+function mirrorFromOpposite(): void {
+  if (!state.layers || !state.selectedCell) return;
+  const [y, x] = state.selectedCell;
+  if (y === 2 && x === 2) return; // center is its own opposite
+  const oy = 4 - y, ox = 4 - x;
+  const layers: LayerName[] = state.linked ? ['mask', 'overlay'] : [state.activeLayer];
+  let any = false;
+  for (const ln of layers) {
+    const cells = state.layers[ln]?.cells;
+    const opp = cells?.[oy]?.[ox];
+    const target = cells?.[y]?.[x];
+    if (!opp || !target) continue; // layer lacks the cells (#COPY / absent) — skip gracefully
+    target.rect = [...opp.rect]; // deep-copy: never alias the source's array
+    if (x !== 2) target.mirrorX = true; // x-axis crossed
+    if (y !== 2) target.mirrorY = true; // y-axis crossed
+    any = true;
+  }
+  if (!any) return;
+  state.dirty = true;
+  notify();
+}
+
 // Mutate the in-memory rect(s) only. Caller (pointermove) redraws directly; the commit
 // (state.dirty + notify) happens once on pointerup, not here.
 function applyDrag(dxImg: number, dyImg: number, mode: DragMode): void {
@@ -250,6 +278,7 @@ let myInput: HTMLInputElement | null = null;
 let modeFreeBtn: HTMLButtonElement | null = null;
 let mode3x3Btn: HTMLButtonElement | null = null;
 let mode5x5Btn: HTMLButtonElement | null = null;
+let mirrorOppBtn: HTMLButtonElement | null = null;
 let readoutEl: HTMLElement | null = null;
 
 export function mountCellsPanel(host: HTMLElement): void {
@@ -259,6 +288,7 @@ export function mountCellsPanel(host: HTMLElement): void {
       <label><input type="checkbox" id="linked"> linked layout</label>
       <label><input type="checkbox" id="mirror-x"> mirror X</label>
       <label><input type="checkbox" id="mirror-y"> mirror Y</label>
+      <button id="mirror-opp" title="Copies the opposite cell's rect + sets mirror flags. One-shot copy — does not stay linked.">Mirror ⇋ opposite</button>
       <button id="mode-free" data-mode="free">Free</button>
       <button id="mode-3x3" data-mode="3x3">3×3</button>
       <button id="mode-5x5" data-mode="5x5lines">5×5 lines</button>
@@ -294,6 +324,8 @@ export function mountCellsPanel(host: HTMLElement): void {
   modeFreeBtn.onclick = () => setGridMode('free');
   mode3x3Btn.onclick = () => setGridMode('3x3');
   mode5x5Btn.onclick = () => setGridMode('5x5lines');
+  mirrorOppBtn = host.querySelector<HTMLButtonElement>('#mirror-opp')!;
+  mirrorOppBtn.onclick = () => mirrorFromOpposite();
   readoutEl = host.querySelector<HTMLElement>('#readout')!;
 
   // Fresh mount (border/layer/linked switch). resetGridMode cleared lines in selectBorder; ensure
@@ -438,6 +470,14 @@ export function updateCellsPanel(): void {
   const selCell = state.selectedCell && state.layers?.[state.activeLayer]?.cells?.[state.selectedCell[0]]?.[state.selectedCell[1]];
   if (mxInput) mxInput.checked = !!selCell?.mirrorX;
   if (myInput) myInput.checked = !!selCell?.mirrorY;
+
+  // Enable the one-shot mirror-from-opposite action only in free mode with a non-center cell
+  // selected and cells present (selCell resolves the active layer's selected EditorCell above).
+  if (mirrorOppBtn) {
+    const sc = state.selectedCell;
+    const nonCenter = !!sc && !(sc[0] === 2 && sc[1] === 2);
+    mirrorOppBtn.disabled = !(gridMode === 'free' && nonCenter && !!selCell);
+  }
 
   // If the current mode is no longer available for these cells (e.g. an edit aliased them),
   // fall back to Free. Re-seed the working lines from the updated cells — but NOT mid-drag, so
