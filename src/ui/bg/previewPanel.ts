@@ -27,7 +27,7 @@ function ensureImage(path: string | null): Rgba | null {
   if (!path || path === '#HURL_NOISE') return null;
   if (imgCache.has(path)) return imgCache.get(path)!;
   imgCache.set(path, null);
-  loadImage(path).then((img) => { imgCache.set(path, img); }).catch(() => imgCache.set(path, null));
+  loadImage(path).then((img) => { imgCache.set(path, img); if (!bgState.playing) frame(); }).catch(() => imgCache.set(path, null));
   return null;
 }
 
@@ -111,8 +111,8 @@ export function mountBgPreview(host: HTMLElement, deps: BgPreviewDeps): void {
   canvas = host.querySelector('[data-pv="canvas"]')!;
   try { renderer = new BgPreviewRenderer(canvas); } catch (e) { host.innerHTML = `<div class="bg-note">WebGL2 unavailable: ${String(e)}</div>`; return; }
 
-  host.querySelector('[data-pv="w"]')!.addEventListener('change', (e) => { panelW = Number((e.target as HTMLInputElement).value) || panelW; });
-  host.querySelector('[data-pv="h"]')!.addEventListener('change', (e) => { panelH = Number((e.target as HTMLInputElement).value) || panelH; });
+  host.querySelector('[data-pv="w"]')!.addEventListener('change', (e) => { panelW = Number((e.target as HTMLInputElement).value) || panelW; if (!bgState.playing) frame(); });
+  host.querySelector('[data-pv="h"]')!.addEventListener('change', (e) => { panelH = Number((e.target as HTMLInputElement).value) || panelH; if (!bgState.playing) frame(); });
   host.querySelector('[data-pv="slot"]')!.addEventListener('change', (e) => { bgState.selected.backdrops = (e.target as HTMLSelectElement).value; bgNotify(); });
   host.querySelector('[data-pv="l0"]')!.addEventListener('change', (e) => { const slot = bgState.selected.backdrops; if (slot) setPairing(slot, (e.target as HTMLSelectElement).value, bgState.pairing[slot]?.[1] ?? ''); });
   host.querySelector('[data-pv="l1"]')!.addEventListener('change', (e) => { const slot = bgState.selected.backdrops; if (slot) setPairing(slot, bgState.pairing[slot]?.[0] ?? 'White', (e.target as HTMLSelectElement).value); });
