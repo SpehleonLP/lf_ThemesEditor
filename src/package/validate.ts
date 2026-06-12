@@ -3,6 +3,7 @@ import Ajv, { type ValidateFunction } from 'ajv';
 import type { PackageDoc, FileKey } from './model';
 import type { RefIndex, Namespace } from './refIndex';
 import type { AssetList } from './assets';
+import { marksAscending } from '../bg/gradients';
 
 export type Severity = 'error' | 'warning' | 'notice';
 
@@ -149,7 +150,39 @@ const bordersTessUnitsValidator: Validator = (pkg) => {
   return out;
 };
 
-const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator];
+// 7. bg-gradient-marks — non-ascending marks crash the bake; out-of-range t is dead/misleading.
+const bgGradientMarksValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const grads = pkg.files.backgrounds.root?.Gradients;
+  if (!grads || typeof grads !== 'object') return out;
+  for (const name of Object.keys(grads)) {
+    const marks = grads[name];
+    if (!Array.isArray(marks)) continue;
+    const ts = marks.map((m: any) => (Array.isArray(m) ? m[0] : NaN)) as number[];
+    const parsed = marks
+      .filter((m: any) => Array.isArray(m) && typeof m[0] === 'number')
+      .map((m: any) => [m[0], m[1]] as [number, [number, number, number, number]]);
+    if (!marksAscending(parsed)) {
+      out.push({
+        severity: 'error', category: 'bg-gradient-marks',
+        message: `Gradient "${name}" has marks that are not in ascending order — the builder's bake loop reads past the end of the marks and can crash the build (the engine's own check misses it).`,
+        file: 'backgrounds', jsonPath: ['Gradients', name],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:gradients', name } },
+      });
+    }
+    if (ts.some((t) => t < 0 || t > 1)) {
+      out.push({
+        severity: 'warning', category: 'bg-gradient-marks',
+        message: `Gradient "${name}" has a mark t outside 0..1 — ends are auto-extended, so out-of-range marks are dead or misleading.`,
+        file: 'backgrounds', jsonPath: ['Gradients', name],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:gradients', name } },
+      });
+    }
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator];
 
 export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
   return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));

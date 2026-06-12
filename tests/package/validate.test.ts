@@ -82,6 +82,26 @@ test('loadError file is reported once and not schema-checked', async () => {
   expect(b[0].severity).toBe('error');
 });
 
+describe('bg-gradient-marks', () => {
+  test('flags non-ascending gradient marks as an error', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Gradients: { bad: [[0,[0,0,0,1]],[0.8,[1,1,1,1]],[0.3,[1,0,0,1]]] } }) }));
+    const e = issues.find((i) => i.category === 'bg-gradient-marks' && i.severity === 'error');
+    expect(e).toBeTruthy();
+    expect(e!.message).toMatch(/ascending/i);
+  });
+
+  test('warns when a mark t is outside 0..1', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Gradients: { oob: [[0,[0,0,0,1]],[1.5,[1,1,1,1]]] } }) }));
+    const w = issues.find((i) => i.category === 'bg-gradient-marks' && i.severity === 'warning');
+    expect(w).toBeTruthy();
+  });
+
+  test('no bg-gradient-marks issue for a well-formed gradient', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Gradients: { ok: [[0,[0,0,0,1]],[1,[1,1,1,1]]] } }) }));
+    expect(issues.some((i) => i.category === 'bg-gradient-marks')).toBe(false);
+  });
+});
+
 describe('borders-tessellation-units', () => {
   async function issuesFor(tessellation: number[]) {
     const p = pkg({ borders: fd({ Header_0: { Overlay: { Cells: '#COPY' }, Tessellation: tessellation } }) });
