@@ -552,8 +552,8 @@ const ref = (v: unknown): string | null =>
   typeof v === 'string' && v !== '' && !v.startsWith('#') ? v : null;
 
 export function resolveLightTexCoord(
-  lightEntry: { texCoord?: unknown } | null | undefined,
-  layerEntry: { texCoord?: unknown } | null | undefined,
+  lightEntry: { texCoord?: unknown; [k: string]: unknown } | null | undefined,
+  layerEntry: { texCoord?: unknown; [k: string]: unknown } | null | undefined,
 ): string | null {
   return ref(lightEntry?.texCoord) ?? ref(layerEntry?.texCoord) ?? null;
 }
