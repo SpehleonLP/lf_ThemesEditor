@@ -8,7 +8,7 @@ import { selectBorder } from '../main';
 import { renderBorderList } from '../borderList';
 import { mountCellsPanel, updateCellsPanel } from '../rectEditor';
 import { mountGeometryFields, updateGeometryFields } from '../propertiesForm';
-import { renderPreviewPanel } from '../previewPanel';
+import { mountPreview, updatePreview } from '../previewPanel';
 import { renderExportPanel } from '../exportPanel';
 
 // Push the in-memory layer fill/cell edits back onto the shared root so serialize captures them.
@@ -56,7 +56,7 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
       { host: list, mount(h) { renderBorderList(h, (n) => void selectBorder(n)); }, update() { renderBorderList(this.host, (n) => void selectBorder(n)); } },
       { host: editor, mount: mountCellsPanel, update: updateCellsPanel },
       { host: props, mount: mountGeometryFields, update: updateGeometryFields },
-      { host: previewHost, mount(h) { renderPreviewPanel(h); }, update() { renderPreviewPanel(this.host); } },
+      { host: previewHost, mount: mountPreview, update: updatePreview },
       { host: exportHost, mount(h) { renderExportPanel(h); }, update() { renderExportPanel(this.host); } },
     ];
 
