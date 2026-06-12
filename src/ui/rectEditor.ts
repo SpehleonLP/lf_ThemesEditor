@@ -1,6 +1,13 @@
 import { state, notify, type LayerName } from './state';
-import { ninePatchGrid } from '../cells';
 import { mountCellMap, updateCellMap } from './cellMap';
+import {
+  detectGridMode,
+  extractLines3x3,
+  extractLines5x5,
+  rewrite3x3,
+  rewrite5x5Line,
+  type GridMode,
+} from '../gridModes';
 import type { EditorCell, Rgba } from '../types';
 
 const HANDLE = 6; // px, screen-space
@@ -8,8 +15,15 @@ const HANDLE = 6; // px, screen-space
 interface View { zoom: number; ox: number; oy: number; }
 const view: View = { zoom: 1, ox: 20, oy: 20 };
 
-// null = normal rect mode; non-null = 9-patch quick mode (two draggable cut lines per axis).
-let ninePatch: { xCuts: [number, number]; yCuts: [number, number] } | null = null;
+// Grid editing mode. 'free' = per-cell rect/handle/move drag (Phase 2). '3x3' and '5x5lines'
+// expose the IMPLIED partition lines of the current cells as draggable line overlays. Entering a
+// mode never mutates data — it only seeds the local working line state below from the cells. A
+// line DRAG that moves a boundary is the only thing that commits (dirty + notify), via rewrite*.
+let gridMode: GridMode = 'free';
+// Local working line state for the line modes, seeded on mode-enter / after a commit. Pixel-space;
+// must be dropped across border/image switches (see resetGridMode) so it can't leak.
+let cuts3x3: { xCuts: [number, number]; yCuts: [number, number] } | null = null;
+let lines5x5: { xLines: number[]; yLines: number[] } | null = null;
 
 // Decoded display image, cached per Rgba identity. The same Rgba buffer is reused across
 // notify()s/redraws while a border stays selected, so identity keying avoids re-decoding.
@@ -35,13 +49,18 @@ type DragMode =
   | { kind: 'pan' }
   | { kind: 'move' }
   | { kind: 'handle'; hx: 0 | 1 | -1; hy: 0 | 1 | -1 }
-  | { kind: 'cut'; axis: 'x' | 'y'; index: 0 | 1 };
-// `changed` tracks whether the drag mutated cell rects (vs a view-only pan), so pointerup
+  | { kind: 'cut'; axis: 'x' | 'y'; index: 0 | 1 }          // 3x3 inner cut line
+  | { kind: 'line'; axis: 'x' | 'y'; index: number };       // 5x5 partition line
+// `changed` tracks whether the drag mutated cell rects / lines (vs a view-only pan), so pointerup
 // commits (dirty + notify) exactly once and only when something actually changed.
 let drag: { mode: DragMode; lastX: number; lastY: number; changed: boolean } | null = null;
 
+function activeCells(): EditorCell[][] | null {
+  return state.layers?.[state.activeLayer]?.cells ?? null;
+}
+
 function cellAt(ix: number, iy: number): [number, number] | null {
-  const cells = state.layers?.[state.activeLayer]?.cells;
+  const cells = activeCells();
   if (!cells) return null;
   for (let y = 4; y >= 0; --y)
     for (let x = 4; x >= 0; --x) {
@@ -74,6 +93,11 @@ function editTargets(): EditorCell[] {
   return out;
 }
 
+// Layers a grid rewrite (3x3 / 5x5) writes to, respecting the linked flag.
+function rewriteTargets(): LayerName[] {
+  return state.linked ? ['mask', 'overlay'] : [state.activeLayer];
+}
+
 // Mutate the in-memory rect(s) only. Caller (pointermove) redraws directly; the commit
 // (state.dirty + notify) happens once on pointerup, not here.
 function applyDrag(dxImg: number, dyImg: number, mode: DragMode): void {
@@ -95,71 +119,108 @@ function activeImage(): { width: number; height: number } | null {
   return state.layers?.[state.activeLayer]?.image ?? null;
 }
 
-// Initialize cut lines to image thirds and enter 9-patch mode.
-function enterNinePatch(): void {
+function imageSize(): [number, number] {
   const img = activeImage();
-  if (!img) return; // no-op when no image loaded
-  ninePatch = {
-    xCuts: [Math.round(img.width / 3), Math.round((2 * img.width) / 3)],
-    yCuts: [Math.round(img.height / 3), Math.round((2 * img.height) / 3)],
-  };
-  notify();
+  return [img?.width ?? 0, img?.height ?? 0];
 }
 
-function cancelNinePatch(): void {
-  ninePatch = null;
-  notify();
+// Availability of the line modes, derived from the ACTIVE layer's cells. '5x5lines' is also
+// available whenever '3x3' is (3x3 is a special partition). 'free' is always available.
+function modeAvailability(): { has3x3: boolean; has5x5: boolean; reason: string } {
+  const cells = activeCells();
+  if (!cells) return { has3x3: false, has5x5: false, reason: 'no cells (layer is #COPY or absent)' };
+  const det = detectGridMode(cells);
+  if (det === '3x3') return { has3x3: true, has5x5: true, reason: '' };
+  if (det === '5x5lines') return { has3x3: false, has5x5: true, reason: '' };
+  return { has3x3: false, has5x5: false, reason: 'aliased / non-partition cells — free mode only' };
 }
 
-// Leave 9-patch mode without notifying — for external callers (border/layer switch)
-// that will notify() themselves. Prevents stale image-space cuts leaking across images.
-export function exitNinePatch(): void {
-  ninePatch = null;
+// Seed the local working line state for the line modes from the current cells. Never mutates data.
+function seedLines(): void {
+  const cells = activeCells();
+  if (!cells) { cuts3x3 = null; lines5x5 = null; return; }
+  if (gridMode === '3x3') cuts3x3 = extractLines3x3(cells);
+  else if (gridMode === '5x5lines') lines5x5 = extractLines5x5(cells);
 }
 
-function applyNinePatch(): void {
-  const img = activeImage();
-  if (!img || !ninePatch || !state.layers) { ninePatch = null; notify(); return; }
-  const layers: LayerName[] = state.linked ? ['mask', 'overlay'] : [state.activeLayer];
-  for (const ln of layers) {
-    const layer = state.layers[ln];
-    if (!layer) continue;
-    layer.cells = ninePatchGrid(ninePatch.xCuts, ninePatch.yCuts, [img.width, img.height]);
+// Switch editing mode. VIEW-ONLY: seeds local lines + redraws + refreshes the toolbar; it does
+// NOT set state.dirty. Only an actual line drag (rewrite*) commits.
+function setGridMode(mode: GridMode): void {
+  if (mode === '3x3' || mode === '5x5lines') {
+    const a = modeAvailability();
+    if ((mode === '3x3' && !a.has3x3) || (mode === '5x5lines' && !a.has5x5)) return; // unavailable
   }
-  state.dirty = true;
-  ninePatch = null;
-  notify();
+  gridMode = mode;
+  cuts3x3 = null; lines5x5 = null;
+  seedLines();
+  if (canvas) { draw(canvas); updateCellMap(); }
+  refreshModeBar();
 }
 
-// Hit-test the nearest cut line within HANDLE screen-px of the cursor.
+// Drop transient line-drag state and fall back to Free. Used on border/layer switches so
+// pixel-space lines from the previous image never leak. Recomputes default mode = Free (the
+// view-only invariant: never auto-converts data, and switching modes never dirties).
+export function resetGridMode(): void {
+  gridMode = 'free';
+  cuts3x3 = null;
+  lines5x5 = null;
+}
+
+// Hit-test the nearest 3x3 inner cut line within HANDLE screen-px of the cursor.
 function hitCut(sx: number, sy: number): DragMode | null {
-  if (!ninePatch) return null;
+  if (!cuts3x3) return null;
   let best: DragMode | null = null;
   let bestDist = HANDLE;
   for (const index of [0, 1] as const) {
-    const dxScreen = Math.abs(toScreen(ninePatch.xCuts[index], 0)[0] - sx);
+    const dxScreen = Math.abs(toScreen(cuts3x3.xCuts[index], 0)[0] - sx);
     if (dxScreen < bestDist) { bestDist = dxScreen; best = { kind: 'cut', axis: 'x', index }; }
-    const dyScreen = Math.abs(toScreen(0, ninePatch.yCuts[index])[1] - sy);
+    const dyScreen = Math.abs(toScreen(0, cuts3x3.yCuts[index])[1] - sy);
     if (dyScreen < bestDist) { bestDist = dyScreen; best = { kind: 'cut', axis: 'y', index }; }
+  }
+  return best;
+}
+
+// Hit-test the nearest 5x5 partition line within HANDLE screen-px of the cursor (all 6 per axis).
+function hitLine(sx: number, sy: number): DragMode | null {
+  if (!lines5x5) return null;
+  let best: DragMode | null = null;
+  let bestDist = HANDLE;
+  for (let index = 0; index < 6; ++index) {
+    const dxScreen = Math.abs(toScreen(lines5x5.xLines[index], 0)[0] - sx);
+    if (dxScreen < bestDist) { bestDist = dxScreen; best = { kind: 'line', axis: 'x', index }; }
+    const dyScreen = Math.abs(toScreen(0, lines5x5.yLines[index])[1] - sy);
+    if (dyScreen < bestDist) { bestDist = dyScreen; best = { kind: 'line', axis: 'y', index }; }
   }
   return best;
 }
 
 function dragCut(mode: Extract<DragMode, { kind: 'cut' }>, ix: number, iy: number): void {
   const img = activeImage();
-  if (!ninePatch || !img) return;
+  if (!cuts3x3 || !img) return;
   if (mode.axis === 'x') {
     const v = Math.max(0, Math.min(img.width, Math.round(ix)));
     // clamp to the sibling so the held line never crosses (index stays put)
-    ninePatch.xCuts[mode.index] = mode.index === 0
-      ? Math.min(v, ninePatch.xCuts[1])
-      : Math.max(v, ninePatch.xCuts[0]);
+    cuts3x3.xCuts[mode.index] = mode.index === 0
+      ? Math.min(v, cuts3x3.xCuts[1])
+      : Math.max(v, cuts3x3.xCuts[0]);
   } else {
     const v = Math.max(0, Math.min(img.height, Math.round(iy)));
-    ninePatch.yCuts[mode.index] = mode.index === 0
-      ? Math.min(v, ninePatch.yCuts[1])
-      : Math.max(v, ninePatch.yCuts[0]);
+    cuts3x3.yCuts[mode.index] = mode.index === 0
+      ? Math.min(v, cuts3x3.yCuts[1])
+      : Math.max(v, cuts3x3.yCuts[0]);
   }
+}
+
+function dragLine(mode: Extract<DragMode, { kind: 'line' }>, ix: number, iy: number): void {
+  const img = activeImage();
+  if (!lines5x5 || !img) return;
+  const arr = mode.axis === 'x' ? lines5x5.xLines : lines5x5.yLines;
+  const max = mode.axis === 'x' ? img.width : img.height;
+  const raw = Math.round(mode.axis === 'x' ? ix : iy);
+  // clamp to neighbors so lines never cross (rewrite5x5Line clamps identically on commit)
+  const lower = mode.index > 0 ? arr[mode.index - 1] : 0;
+  const upper = mode.index < 5 ? arr[mode.index + 1] : max;
+  arr[mode.index] = Math.max(0, Math.min(max, Math.max(lower, Math.min(upper, raw))));
 }
 
 // --- Panel: built once via mountCellsPanel, refreshed in place via updateCellsPanel. ---
@@ -177,9 +238,9 @@ const MAP_COL_W = 140;
 let linkedInput: HTMLInputElement | null = null;
 let mxInput: HTMLInputElement | null = null;
 let myInput: HTMLInputElement | null = null;
-let npEnterBtn: HTMLButtonElement | null = null;
-let npApplyBtn: HTMLButtonElement | null = null;
-let npCancelBtn: HTMLButtonElement | null = null;
+let modeFreeBtn: HTMLButtonElement | null = null;
+let mode3x3Btn: HTMLButtonElement | null = null;
+let mode5x5Btn: HTMLButtonElement | null = null;
 let readoutEl: HTMLElement | null = null;
 
 export function mountCellsPanel(host: HTMLElement): void {
@@ -189,9 +250,9 @@ export function mountCellsPanel(host: HTMLElement): void {
       <label><input type="checkbox" id="linked"> linked layout</label>
       <label><input type="checkbox" id="mirror-x"> mirror X</label>
       <label><input type="checkbox" id="mirror-y"> mirror Y</label>
-      <button id="np-enter">9-patch</button>
-      <button id="np-apply">Apply</button>
-      <button id="np-cancel">Cancel</button>
+      <button id="mode-free" data-mode="free">Free</button>
+      <button id="mode-3x3" data-mode="3x3">3×3</button>
+      <button id="mode-5x5" data-mode="5x5lines">5×5 lines</button>
       <span id="readout" style="margin-left:auto;font-family:monospace"></span>
     </div>
     <div class="cells-row" style="display:flex;gap:8px;align-items:stretch">
@@ -207,7 +268,9 @@ export function mountCellsPanel(host: HTMLElement): void {
   mountCellMap(host.querySelector<HTMLElement>('#cell-map-host')!);
 
   host.querySelectorAll<HTMLButtonElement>('button[data-layer]').forEach((b) => {
-    b.onclick = () => { ninePatch = null; state.activeLayer = b.dataset.layer as LayerName; notify(); };
+    // Reset transient grid-drag state before switching layer so pixel-space lines from the
+    // previous layer's cells can't leak; the remount re-seeds from the new layer.
+    b.onclick = () => { resetGridMode(); state.activeLayer = b.dataset.layer as LayerName; notify(); };
   });
   linkedInput = host.querySelector<HTMLInputElement>('#linked')!;
   linkedInput.onchange = () => { state.linked = linkedInput!.checked; notify(); };
@@ -216,13 +279,21 @@ export function mountCellsPanel(host: HTMLElement): void {
   mxInput.onchange = () => { for (const c of editTargets()) c.mirrorX = mxInput!.checked; state.dirty = true; notify(); };
   myInput.onchange = () => { for (const c of editTargets()) c.mirrorY = myInput!.checked; state.dirty = true; notify(); };
 
-  npEnterBtn = host.querySelector<HTMLButtonElement>('#np-enter')!;
-  npEnterBtn.onclick = enterNinePatch;
-  npApplyBtn = host.querySelector<HTMLButtonElement>('#np-apply')!;
-  npApplyBtn.onclick = applyNinePatch;
-  npCancelBtn = host.querySelector<HTMLButtonElement>('#np-cancel')!;
-  npCancelBtn.onclick = cancelNinePatch;
+  modeFreeBtn = host.querySelector<HTMLButtonElement>('#mode-free')!;
+  mode3x3Btn = host.querySelector<HTMLButtonElement>('#mode-3x3')!;
+  mode5x5Btn = host.querySelector<HTMLButtonElement>('#mode-5x5')!;
+  modeFreeBtn.onclick = () => setGridMode('free');
+  mode3x3Btn.onclick = () => setGridMode('3x3');
+  mode5x5Btn.onclick = () => setGridMode('5x5lines');
   readoutEl = host.querySelector<HTMLElement>('#readout')!;
+
+  // Fresh mount (border/layer/linked switch). resetGridMode cleared lines in selectBorder; ensure
+  // the local mode is valid for the new cells: if the previous mode is no longer available, fall
+  // back to Free. Then seed lines for whatever mode we land in.
+  const a = modeAvailability();
+  if ((gridMode === '3x3' && !a.has3x3) || (gridMode === '5x5lines' && !a.has5x5)) gridMode = 'free';
+  seedLines();
+  refreshModeBar();
 
   const c = canvas;
   c.onwheel = (e) => {
@@ -237,16 +308,16 @@ export function mountCellsPanel(host: HTMLElement): void {
   };
 
   c.onpointerdown = (e) => {
-    if (ninePatch !== null) {
+    if (gridMode === '3x3' || gridMode === '5x5lines') {
       if (e.button === 1 || e.shiftKey) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY, changed: false }; c.setPointerCapture(e.pointerId); return; }
-      const cut = hitCut(e.offsetX, e.offsetY);
-      drag = cut
-        ? { mode: cut, lastX: e.offsetX, lastY: e.offsetY, changed: false }
+      const hit = gridMode === '3x3' ? hitCut(e.offsetX, e.offsetY) : hitLine(e.offsetX, e.offsetY);
+      drag = hit
+        ? { mode: hit, lastX: e.offsetX, lastY: e.offsetY, changed: false }
         : { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY, changed: false };
       c.setPointerCapture(e.pointerId);
       return;
     }
-    const cells = state.layers?.[state.activeLayer]?.cells;
+    const cells = activeCells();
     if (e.button === 1 || e.shiftKey || !cells) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY, changed: false }; c.setPointerCapture(e.pointerId); return; }
     const sel = state.selectedCell && cells[state.selectedCell[0]][state.selectedCell[1]];
     const h = sel && hitHandle(sel.rect, e.offsetX, e.offsetY);
@@ -264,23 +335,56 @@ export function mountCellsPanel(host: HTMLElement): void {
     drag.lastX = e.offsetX; drag.lastY = e.offsetY;
     if (drag.mode.kind === 'pan') { view.ox += dx; view.oy += dy; } // view-only
     else if (drag.mode.kind === 'cut') { const [ix, iy] = toImage(e.offsetX, e.offsetY); dragCut(drag.mode, ix, iy); drag.changed = true; }
+    else if (drag.mode.kind === 'line') { const [ix, iy] = toImage(e.offsetX, e.offsetY); dragLine(drag.mode, ix, iy); drag.changed = true; }
     else { applyDrag(dx / view.zoom, dy / view.zoom, drag.mode); drag.changed = true; }
-    draw(c); // mutate in-memory only; commit happens on pointerup
+    draw(c); // mutate local lines / in-memory rects only; commit happens on pointerup
   };
 
   const endDrag = (e: PointerEvent) => {
     if (!drag) return;
+    const mode = drag.mode;
     const changed = drag.changed;
     drag = null;
     if (c.hasPointerCapture(e.pointerId)) c.releasePointerCapture(e.pointerId);
-    // Commit once, only if a rect/cut actually changed. Pan-only and pure selection
-    // (already notified on pointerdown) don't re-commit here.
-    if (changed) { state.dirty = true; notify(); }
+    if (!changed) return; // pan-only / pure selection (already notified): nothing to commit
+    if (mode.kind === 'cut') commit3x3();
+    else if (mode.kind === 'line') commit5x5(mode.axis, mode.index);
+    else { state.dirty = true; notify(); }
   };
   c.onpointerup = endDrag;
   c.onpointercancel = endDrag;
 
   draw(c);
+}
+
+// Commit the 3x3 working cuts to the layer(s) via rewrite3x3 (preserves mirror flags), then
+// dirty + notify once. notify() re-runs updateCellsPanel which re-seeds the lines from the
+// now-updated cells.
+function commit3x3(): void {
+  if (!cuts3x3 || !state.layers) return;
+  const size = imageSize();
+  for (const ln of rewriteTargets()) {
+    const layer = state.layers[ln];
+    if (!layer?.cells) continue;
+    layer.cells = rewrite3x3(layer.cells, cuts3x3.xCuts, cuts3x3.yCuts, size);
+  }
+  state.dirty = true;
+  notify();
+}
+
+// Commit one dragged 5x5 partition line to the layer(s) via rewrite5x5Line (clamps + preserves
+// mirror flags), then dirty + notify once.
+function commit5x5(axis: 'x' | 'y', index: number): void {
+  if (!lines5x5 || !state.layers) return;
+  const size = imageSize();
+  const newValue = (axis === 'x' ? lines5x5.xLines : lines5x5.yLines)[index];
+  for (const ln of rewriteTargets()) {
+    const layer = state.layers[ln];
+    if (!layer?.cells) continue;
+    layer.cells = rewrite5x5Line(layer.cells, axis, index, newValue, size);
+  }
+  state.dirty = true;
+  notify();
 }
 
 // Size the canvas off STABLE handles so repeated notifies don't progressively shrink it:
@@ -296,8 +400,23 @@ function sizeCanvasToHost(): void {
   if (canvas.height !== h) canvas.height = h;
 }
 
-// Cheap in-place refresh: resize canvas if image dims changed, sync toolbar control
-// states without rebuilding the DOM, toggle 9-patch toolbar, then redraw.
+// Reflect the current mode + availability onto the three mode-bar buttons. View-only.
+function refreshModeBar(): void {
+  const a = modeAvailability();
+  const set = (btn: HTMLButtonElement | null, mode: GridMode, enabled: boolean) => {
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.title = enabled ? '' : a.reason;
+    btn.setAttribute('aria-pressed', String(gridMode === mode));
+  };
+  set(modeFreeBtn, 'free', true);
+  set(mode3x3Btn, '3x3', a.has3x3);
+  set(mode5x5Btn, '5x5lines', a.has5x5);
+}
+
+// Cheap in-place refresh: resize canvas if image dims changed, sync toolbar control states
+// without rebuilding the DOM, re-seed line modes from the (possibly updated) cells unless a drag
+// is in progress, refresh the mode bar, then redraw.
 export function updateCellsPanel(): void {
   if (!canvas) return;
   sizeCanvasToHost();
@@ -307,47 +426,74 @@ export function updateCellsPanel(): void {
   if (mxInput) mxInput.checked = !!selCell?.mirrorX;
   if (myInput) myInput.checked = !!selCell?.mirrorY;
 
-  // 9-patch toolbar visibility tracks `ninePatch` (a value-state, refreshed in place).
-  const inNp = ninePatch !== null;
-  if (npEnterBtn) { npEnterBtn.style.display = inNp ? 'none' : ''; npEnterBtn.disabled = !activeImage(); }
-  if (npApplyBtn) npApplyBtn.style.display = inNp ? '' : 'none';
-  if (npCancelBtn) npCancelBtn.style.display = inNp ? '' : 'none';
+  // If the current mode is no longer available for these cells (e.g. an edit aliased them),
+  // fall back to Free. Re-seed the working lines from the updated cells — but NOT mid-drag, so
+  // an in-progress line drag isn't clobbered by a notify().
+  if (!drag) {
+    const a = modeAvailability();
+    if ((gridMode === '3x3' && !a.has3x3) || (gridMode === '5x5lines' && !a.has5x5)) gridMode = 'free';
+    seedLines();
+  }
+  refreshModeBar();
 
   draw(canvas);
   updateCellMap();
 }
 
-function drawNinePatch(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement | null): void {
-  if (!ninePatch) return;
+// Draw the 3x3 inner cut lines + readout.
+function drawCuts3x3(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement | null): void {
+  if (!cuts3x3) return;
   const w = (img?.width ?? 0) * view.zoom;
   const h = (img?.height ?? 0) * view.zoom;
   ctx.strokeStyle = '#0af';
   ctx.lineWidth = 1;
-  for (const cx of ninePatch.xCuts) {
+  for (const cx of cuts3x3.xCuts) {
     const [sx] = toScreen(cx, 0);
     ctx.beginPath(); ctx.moveTo(sx, view.oy); ctx.lineTo(sx, view.oy + h); ctx.stroke();
   }
-  for (const cy of ninePatch.yCuts) {
+  for (const cy of cuts3x3.yCuts) {
     const [, sy] = toScreen(0, cy);
     ctx.beginPath(); ctx.moveTo(view.ox, sy); ctx.lineTo(view.ox + w, sy); ctx.stroke();
   }
   if (readoutEl) readoutEl.textContent =
-    `9-patch  x=[${ninePatch.xCuts.join(', ')}]  y=[${ninePatch.yCuts.join(', ')}]`;
+    `3×3  x=[${cuts3x3.xCuts.join(', ')}]  y=[${cuts3x3.yCuts.join(', ')}]`;
+}
+
+// Draw the 5x5 partition lines (6 per axis) + readout.
+function drawLines5x5(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement | null): void {
+  if (!lines5x5) return;
+  const w = (img?.width ?? 0) * view.zoom;
+  const h = (img?.height ?? 0) * view.zoom;
+  ctx.strokeStyle = '#0af';
+  ctx.lineWidth = 1;
+  for (const lx of lines5x5.xLines) {
+    const [sx] = toScreen(lx, 0);
+    ctx.beginPath(); ctx.moveTo(sx, view.oy); ctx.lineTo(sx, view.oy + h); ctx.stroke();
+  }
+  for (const ly of lines5x5.yLines) {
+    const [, sy] = toScreen(0, ly);
+    ctx.beginPath(); ctx.moveTo(view.ox, sy); ctx.lineTo(view.ox + w, sy); ctx.stroke();
+  }
+  if (readoutEl) readoutEl.textContent =
+    `5×5  x=[${lines5x5.xLines.join(', ')}]  y=[${lines5x5.yLines.join(', ')}]`;
 }
 
 function draw(canvas: HTMLCanvasElement): void {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Publish the view transform so tests (and tooling) can map image-space lines to canvas px
+  // without re-deriving the transform; mirrors previewPanel's data-layout-* convention.
+  canvas.dataset.viewZoom = String(view.zoom);
+  canvas.dataset.viewOx = String(view.ox);
+  canvas.dataset.viewOy = String(view.oy);
   const img = ensureImageCanvas();
   ctx.imageSmoothingEnabled = view.zoom < 1;
   if (img) ctx.drawImage(img, view.ox, view.oy, img.width * view.zoom, img.height * view.zoom);
 
-  if (ninePatch !== null) {
-    drawNinePatch(ctx, img);
-    return;
-  }
+  if (gridMode === '3x3') { drawCuts3x3(ctx, img); return; }
+  if (gridMode === '5x5lines') { drawLines5x5(ctx, img); return; }
 
-  const cells = state.layers?.[state.activeLayer]?.cells;
+  const cells = activeCells();
   if (!cells) { if (readoutEl) readoutEl.textContent = 'no cells (layer is #COPY or absent)'; return; }
 
   for (let y = 0; y < 5; ++y)
