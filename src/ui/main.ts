@@ -129,6 +129,7 @@ export async function selectBorder(name: string): Promise<void> {
   state.layers = { mask, overlay };
   state.selectedCell = null;
   state.editingSource = false;
+  state.linked = false; // normal/packed borders always open unlinked (symmetric with the source path deriving it from authoring); never leak the prior selection's linked state
   if (!es) state.saveStatus = null; // preserve the source-load-failed warning when es was present
   notify();
 }
