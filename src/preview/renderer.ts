@@ -51,10 +51,12 @@ function gpuCells(cells: CellGrid, imageSize: [number, number]): { rects: Float3
 export class PreviewRenderer {
   private gl: WebGL2RenderingContext;
   private prog: WebGLProgram;
+  private uloc = new Map<string, WebGLUniformLocation | null>();
   private vao: WebGLVertexArrayObject;
   private bufs: WebGLBuffer[];
   private maskTex: WebGLTexture;
   private overlayTex: WebGLTexture;
+  private texFor: { mask: Rgba | null; overlay: Rgba | null } = { mask: null, overlay: null };
 
   constructor(private canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true });
@@ -72,6 +74,16 @@ export class PreviewRenderer {
       gl.deleteShader(vs);
       gl.deleteShader(fs);
       throw new Error(log);
+    }
+    // Cache all active uniform locations once so per-draw lookups are O(1) map reads.
+    const nU = gl.getProgramParameter(this.prog, gl.ACTIVE_UNIFORMS) as number;
+    for (let i = 0; i < nU; ++i) {
+      const info = gl.getActiveUniform(this.prog, i);
+      if (!info) continue;
+      const base = info.name.replace(/\[0\]$/, '');
+      const baseLoc = gl.getUniformLocation(this.prog, info.name);
+      this.uloc.set(info.name, baseLoc);
+      if (base !== info.name) this.uloc.set(`${base}[0]`, baseLoc);
     }
     // Program keeps its own linked copy; detach + delete the shader objects.
     gl.detachShader(this.prog, vs);
@@ -134,11 +146,20 @@ export class PreviewRenderer {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.bufs[3]);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.DYNAMIC_DRAW);
 
-    const u = (n: string) => gl.getUniformLocation(this.prog, n);
+    const u = (name: string): WebGLUniformLocation | null => {
+      if (this.uloc.has(name)) return this.uloc.get(name) ?? null;
+      const loc = gl.getUniformLocation(this.prog, name); // tolerate array-element names not enumerated
+      this.uloc.set(name, loc);
+      console.assert(loc !== null, `preview: uniform "${name}" not found after clean link`);
+      return loc;
+    };
     const setLayer = (prefix: 'mask' | 'overlay', layer: PreviewLayer | null, tex: WebGLTexture, unit: number) => {
       gl.uniform1i(u(`u_has${prefix === 'mask' ? 'Mask' : 'Overlay'}`), layer ? 1 : 0);
       if (!layer) return;
-      this.upload(tex, layer.image);
+      if (this.texFor[prefix] !== layer.image) {
+        this.upload(tex, layer.image);
+        this.texFor[prefix] = layer.image;
+      }
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(u(`u_${prefix}Tex`), unit);
