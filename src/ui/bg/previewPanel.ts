@@ -62,7 +62,11 @@ function lightUniforms(name: string, layerTexCoord: string | undefined, tcs: Rec
 }
 
 function frame(): void {
+  raf = 0;
   if (!renderer || !canvas || !_deps) return;
+  // Hidden surface (display:none host) — skip work; updateBgPreview restarts on next show.
+  if (_host && _host.offsetParent === null) return;
+  canvas.dataset.frame = String((Number(canvas.dataset.frame) || 0) + 1); // e2e: rendered-frame tick (only while visible)
   const slot = bgState.selected.backdrops || Object.keys(_deps.file.root.Backgrounds ?? {})[0];
   const entry = slot ? _deps.file.root.Backgrounds?.[slot] : null;
   rebuildGradients();
@@ -140,5 +144,6 @@ export function updateBgPreview(): void {
   fill('[data-pv="slot"]', slots, slot);
   const pair = bgState.pairing[slot] ?? ['White', ''];
   fill('[data-pv="l0"]', lights, pair[0]); fill('[data-pv="l1"]', lights, pair[1]);
-  if (!bgState.playing) frame(); // static refresh while paused so edits show
+  if (bgState.playing && !raf) raf = requestAnimationFrame(frame); // re-shown + playing → resume loop (frame self-suspends if still hidden)
+  else if (!bgState.playing) frame(); // static refresh while paused so edits show
 }

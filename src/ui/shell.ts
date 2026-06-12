@@ -127,6 +127,10 @@ export function createShell(deps: ShellDeps): Shell {
     active = key;
     ensureMounted(key);
     for (const [k, h] of hosts) h.style.display = k === key ? '' : 'none';
+    // Re-render the now-visible surface so any work it suspended while hidden
+    // (e.g. bg preview's rAF loop) re-arms. Display is toggled first so the
+    // host's offsetParent is non-null when refresh runs.
+    surfaceByKey.get(key)!.refresh(deps.getContext());
     renderNav();
   }
 

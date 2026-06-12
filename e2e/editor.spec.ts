@@ -331,6 +331,24 @@ test('backgrounds: tab switch keeps preview canvas alive', async ({ page }) => {
   await expect(page.locator('.bg-pv-canvas')).toBeVisible(); // preview persists across tabs
 });
 
+test('backgrounds: away→back resumes the playing preview loop', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Backgrounds/ }).click();
+  const canvas = page.locator('.bg-pv-canvas');
+  await expect(canvas).toBeVisible();
+  // Preview mounts playing (⏸). Switch AWAY (loop suspends on the hidden host) then BACK.
+  await page.locator('.nav-row[data-surface="borders"]').click();
+  await expect(page.locator('.borders-surface')).toBeVisible();
+  await page.getByRole('button', { name: /Backgrounds/ }).click();
+  await expect(canvas).toBeVisible();
+  // frame() publishes data-frame, ticking once per rendered (visible) frame. If the rAF loop
+  // re-armed on re-activation the counter keeps climbing; the frozen-until-edit regression would
+  // leave it stuck. Content-independent, so it holds even where WebGL2 is unavailable.
+  const frameCount = () => canvas.evaluate((c: HTMLCanvasElement) => Number(c.dataset.frame) || 0);
+  const start = await frameCount();
+  await expect.poll(frameCount, { timeout: 4000 }).toBeGreaterThan(start);
+});
+
 test('response curves: add an event and bind a channel', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /Response Curves/ }).click();
