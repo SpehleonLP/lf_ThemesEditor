@@ -34,7 +34,7 @@ export class BgPreviewRenderer {
   private vao: WebGLVertexArrayObject;
   private bufs: WebGLBuffer[];
   private layerTex = new WeakMap<Rgba, WebGLTexture>();
-  private gradTex: WebGLTexture; private gradCount = 0; private gradRev = -1;
+  private gradTex: WebGLTexture; private gradCount = 0; private gradKey = '';
   private sceneTex: WebGLTexture;
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -71,10 +71,10 @@ export class BgPreviewRenderer {
     return t;
   }
 
-  // rev: bump when the gradient set changes so we re-upload only then.
-  setGradients(rows: Float32Array[], rev: number): void {
-    if (rev === this.gradRev) return;
-    this.gradRev = rev; this.gradCount = Math.max(rows.length, 1);
+  // key: identifies the gradient set + content revision; re-upload only when it changes.
+  setGradients(rows: Float32Array[], key: string): void {
+    if (key === this.gradKey) return;
+    this.gradKey = key; this.gradCount = Math.max(rows.length, 1);
     const gl = this.gl;
     const data = new Float32Array(128 * this.gradCount * 4);
     rows.forEach((r, i) => data.set(r.subarray(0, 128 * 4), i * 128 * 4));

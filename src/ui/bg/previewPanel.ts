@@ -30,11 +30,20 @@ function ensureImage(path: string | null): Rgba | null {
   return null;
 }
 
+let gradKey = '';
+let gradRows: Float32Array[] = [];
+
 function rebuildGradients(): void {
   const grads = _deps!.file.root.Gradients ?? {};
-  gradOrder = Object.keys(grads);
-  const rows = gradOrder.map((n) => bakeGradient(Array.isArray(grads[n]) ? grads[n] : []) as Float32Array);
-  renderer!.setGradients(rows.length ? rows : [new Float32Array(128 * 4).fill(1)], bgState.gradientRev);
+  const order = Object.keys(grads);
+  // gradientRev covers stop edits; the name list covers add/delete/rename (row indices shift).
+  const key = `${bgState.gradientRev}|${order.join(' ')}`;
+  if (key !== gradKey) {
+    gradKey = key;
+    gradOrder = order;
+    gradRows = order.map((n) => bakeGradient(Array.isArray(grads[n]) ? grads[n] : []));
+  }
+  renderer!.setGradients(gradRows.length ? gradRows : [new Float32Array(128 * 4).fill(1)], gradKey);
 }
 
 function lightUniforms(name: string, layerTexCoord: string | undefined, tcs: Record<string, TexCoordEntry>): LightUniforms | null {
