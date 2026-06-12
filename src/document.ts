@@ -7,12 +7,17 @@ export interface BordersDoc {
 }
 
 export function wrapBordersRoot(root: Record<string, any>): BordersDoc {
-  for (const k of Object.keys(root)) {
-    if (/^[0-9]+$/.test(k)) {
-      throw new Error(`numeric border key "${k}": JS object key-order rules would reorder it; not supported by this editor`);
-    }
+  const bad = numericBorderKeys(root);
+  if (bad.length) {
+    throw new Error(`numeric border key "${bad[0]}": JS object key-order rules would reorder it; not supported by this editor`);
   }
   return { root, names: Object.keys(root) };
+}
+
+// The editor cannot round-trip numeric root keys (JS key-order rules would silently
+// reorder them on serialize). Detect at load so the file degrades to read-only.
+export function numericBorderKeys(root: Record<string, any>): string[] {
+  return Object.keys(root).filter((k) => /^[0-9]+$/.test(k));
 }
 
 export function parseDocument(text: string): BordersDoc {

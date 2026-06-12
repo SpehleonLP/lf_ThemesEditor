@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { parseDocument, serializeDocument, wrapBordersRoot } from '../src/document';
+import { parseDocument, serializeDocument, wrapBordersRoot, numericBorderKeys } from '../src/document';
 import { isValidBorderName } from '../src/borderNames';
 
 const fixture = () => readFile('tests/fixtures/borders.json', 'utf-8');
@@ -39,4 +39,9 @@ test('wrapBordersRoot shares the passed object and lists names', () => {
 
 test('wrapBordersRoot still rejects numeric keys', () => {
   expect(() => wrapBordersRoot({ '0': {} })).toThrow(/numeric border key/);
+});
+
+test('numericBorderKeys finds raw-enum keys', () => {
+  expect(numericBorderKeys({ '12': {}, Header_0: {} })).toEqual(['12']);
+  expect(numericBorderKeys({ Header_0: {} })).toEqual([]);
 });
