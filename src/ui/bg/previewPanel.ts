@@ -7,6 +7,7 @@ import { readLayers, glassEnabled } from '../../bg/backdropModel';
 import { resolveLightTexCoord } from '../../bg/lightInput';
 import { allLightNames } from '../../package/slotNames';
 import { loadImage } from '../../images';
+import { fillOptions } from '../options';
 import type { TexCoordEntry } from '../../bg/texcoord';
 import type { Rgba } from '../../types';
 import type { BgPreviewDeps } from './types';
@@ -130,10 +131,10 @@ export function mountBgPreview(host: HTMLElement, deps: BgPreviewDeps): void {
 export function updateBgPreview(): void {
   if (!_host || !_deps || !renderer) return;
   const slots = Object.keys(_deps.file.root.Backgrounds ?? {});
-  const lights = ['White', '', ...Object.keys(_deps.file.root.Lights ?? {}).filter((n) => n !== 'White')];
+  const lights = ['White', ...Object.keys(_deps.file.root.Lights ?? {}).filter((n) => n !== 'White')];
   const fill = (sel: string, opts: string[], val: string) => {
     const el = _host!.querySelector<HTMLSelectElement>(sel); if (!el || el === document.activeElement) return;
-    el.innerHTML = opts.map((o) => `<option value="${o}">${o || '(none)'}</option>`).join(''); el.value = val;
+    fillOptions(el, opts, val, '(none)');
   };
   const slot = bgState.selected.backdrops || slots[0] || '';
   fill('[data-pv="slot"]', slots, slot);

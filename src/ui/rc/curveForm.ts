@@ -1,5 +1,6 @@
 // src/ui/rc/curveForm.ts
 import { rcState, setTrigger } from '../../rc/state';
+import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
 
 export const STATE_SLOTS = ['HoveringState', 'ToggledState', 'SelectedState', 'BaselineLoop'] as const;
@@ -56,10 +57,7 @@ export function updateCurveForm(): void {
   host.querySelectorAll<HTMLSelectElement>('select[data-slot]').forEach((sel) => {
     const slot = sel.dataset.slot!;
     const cur = c[slot] ?? '';
-    sel.replaceChildren();
-    for (const name of ['', ...events]) { const o = document.createElement('option'); o.value = name; o.textContent = name || '— none —'; sel.appendChild(o); }
-    if (cur && !events.includes(cur)) { const o = document.createElement('option'); o.value = cur; o.textContent = `${cur} (missing)`; sel.appendChild(o); }
-    if (sel !== active) sel.value = cur;
+    if (sel !== active) fillOptions(sel, events, cur, '— none —');
   });
   const ci = host.querySelector<HTMLInputElement>('input[data-k="Comment"]');
   if (ci && ci !== active) ci.value = c.Comment ?? '';

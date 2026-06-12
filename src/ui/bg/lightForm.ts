@@ -1,5 +1,6 @@
 // src/ui/bg/lightForm.ts
 import { bgState, bgNotify, setPairing } from '../../bg/state';
+import { fillOptions } from '../options';
 import type { BgFormDeps } from './types';
 
 const MODES = ['None', 'FADE', 'SAW', 'SINE', 'TRIANGLE'];
@@ -64,13 +65,11 @@ export function updateLightForm(): void {
 
   const gNames = _deps.ctx().index.definitions('bg:gradients');
   const gSel = _host.querySelector<HTMLSelectElement>('[data-f="gradient"]')!;
-  if (gSel !== active) gSel.innerHTML = ['', ...gNames].map((o) => `<option value="${o}">${o || '(none — required)'}</option>`).join('');
+  if (gSel !== active) fillOptions(gSel, gNames, entry.gradient ?? '', '(none — required)');
   const tcNames = _deps.ctx().index.definitions('bg:texcoords');
   const tSel = _host.querySelector<HTMLSelectElement>('[data-f="texCoord"]')!;
-  if (tSel !== active) tSel.innerHTML = ['', ...tcNames].map((o) => `<option value="${o}">${o || '(inherit layer texCoord)'}</option>`).join('');
+  if (tSel !== active) fillOptions(tSel, tcNames, entry.texCoord ?? '', '(inherit layer texCoord)');
 
-  set('[data-f="gradient"]', entry.gradient ?? '');
-  set('[data-f="texCoord"]', entry.texCoord ?? '');
   const dir = Array.isArray(entry.direction) ? entry.direction : [0, 1];
   set('[data-f="dir0"]', String(dir[0])); set('[data-f="dir1"]', String(dir[1]));
   set('[data-f="scale"]', entry.scale != null ? String(entry.scale) : '');

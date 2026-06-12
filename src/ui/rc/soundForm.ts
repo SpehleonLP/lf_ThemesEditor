@@ -1,5 +1,6 @@
 // src/ui/rc/soundForm.ts
 import { rcState } from '../../rc/state';
+import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
 
 const RANGES = ['tone', 'speed', 'volume'] as const;
@@ -50,10 +51,7 @@ export function updateSoundForm(): void {
   const fileSel = host.querySelector<HTMLSelectElement>('select[data-k="file"]')!;
   const sounds = deps.ctx().assets.sounds.filter((a) => a.status !== 'rejected-format').map((a) => a.path);
   const cur = s.file ?? '';
-  fileSel.replaceChildren();
-  for (const p of ['', ...sounds]) { const o = document.createElement('option'); o.value = p; o.textContent = p || '— none —'; fileSel.appendChild(o); }
-  if (cur && !sounds.includes(cur)) { const o = document.createElement('option'); o.value = cur; o.textContent = `${cur} (missing)`; fileSel.appendChild(o); }
-  if (fileSel !== active) fileSel.value = cur;
+  if (fileSel !== active) fillOptions(fileSel, sounds, cur, '— none —');
 
   for (const key of RANGES) {
     const on = host.querySelector<HTMLInputElement>(`input[data-on="${key}"]`)!;

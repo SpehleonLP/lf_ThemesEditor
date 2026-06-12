@@ -1,6 +1,7 @@
 // src/ui/rc/eventForm.ts
 import { rcState, setTrigger } from '../../rc/state';
 import { CHANNELS, CHANNEL_KEYS } from '../../rc/channels';
+import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
 
 let host: HTMLElement | null = null, deps: RcFormDeps | null = null;
@@ -39,10 +40,7 @@ export function updateEventForm(): void {
     const key = sel.dataset.ch!;
     const names = Object.keys(deps!.file.root[CHANNELS[key as keyof typeof CHANNELS].table] ?? {});
     const cur = ev[key] ?? '';
-    sel.replaceChildren();
-    for (const n of ['', ...names]) { const o = document.createElement('option'); o.value = n; o.textContent = n || '— none —'; sel.appendChild(o); }
-    if (cur && !names.includes(cur)) { const o = document.createElement('option'); o.value = cur; o.textContent = `${cur} (missing)`; sel.appendChild(o); }
-    if (sel !== active) sel.value = cur;
+    if (sel !== active) fillOptions(sel, names, cur, '— none —');
   });
   const ci = host.querySelector<HTMLInputElement>('input[data-k="Comment"]');
   if (ci && ci !== active) ci.value = ev.Comment ?? '';

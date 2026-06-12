@@ -1,6 +1,7 @@
 // src/ui/bg/backdropForm.ts
 import { bgState, bgNotify } from '../../bg/state';
 import { readLayers, writeLayers, glassEnabled, setGlass, type LayerModel, type WrapMode } from '../../bg/backdropModel';
+import { fillOptions } from '../options';
 import type { BgFormDeps } from './types';
 
 const WRAPS: WrapMode[] = ['REPEAT', 'MIRRORED_REPEAT', 'CLAMP_TO_EDGE', 'CLAMP_TO_BORDER'];
@@ -115,24 +116,19 @@ export function updateBackdropForm(): void {
 
   // populate image selects from eligible assets each update (cheap; assets change rarely)
   const images = _deps.ctx().assets.images.filter((a) => a.status !== 'rejected-format').map((a) => a.path);
-  const opts = ['', '#HURL_NOISE', ...images];
   const tcNames = _deps.ctx().index.definitions('bg:texcoords');
-  for (const i of [0, 1]) {
-    const card = _host.querySelector<HTMLElement>(`[data-layer="${i}"]`)!;
-    const imgSel = card.querySelector<HTMLSelectElement>('[data-l="image"]')!;
-    if (imgSel !== active) imgSel.innerHTML = opts.map((o) => `<option value="${o}">${o || '(none)'}</option>`).join('');
-    const tcSel = card.querySelector<HTMLSelectElement>('[data-l="texCoord"]')!;
-    if (tcSel !== active) tcSel.innerHTML = ['', ...tcNames].map((o) => `<option value="${o}">${o || '(none)'}</option>`).join('');
-  }
 
   const [l0, l1] = readLayers(entry);
   [l0, l1].forEach((l, i) => {
+    const card = _host!.querySelector<HTMLElement>(`[data-layer="${i}"]`)!;
     const p = `[data-layer="${i}"] `;
     check(p + '[data-l="enabled"]', l.enabled);
-    const inList = ['', '#HURL_NOISE', ...images].includes(l.image);
-    set(p + '[data-l="image"]', inList ? l.image : '');
+    const inList = ['#HURL_NOISE', ...images].includes(l.image);
+    const imgSel = card.querySelector<HTMLSelectElement>('[data-l="image"]')!;
+    if (imgSel !== active) fillOptions(imgSel, ['#HURL_NOISE', ...images], inList ? l.image : '', '(none)');
     set(p + '[data-l="imagePath"]', inList ? '' : l.image);
-    set(p + '[data-l="texCoord"]', l.texCoord);
+    const tcSel = card.querySelector<HTMLSelectElement>('[data-l="texCoord"]')!;
+    if (tcSel !== active) fillOptions(tcSel, tcNames, l.texCoord, '(none)');
     set(p + '[data-l="wrapX"]', l.wrapX); set(p + '[data-l="wrapY"]', l.wrapY);
   });
 
