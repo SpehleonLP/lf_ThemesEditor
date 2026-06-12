@@ -244,7 +244,37 @@ export const rcMarksValidator: Validator = (pkg) => {
   return out;
 };
 
-const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator, bordersLayerImageValidator, rcMarksValidator];
+// texcoord-timefactor — only timeFactor 0 is reliable (known engine shader int/float bug,
+// brief §3.4). The engine port (src/bg/texcoord.ts) defaults an ABSENT timeFactor to 1, so an
+// absent field silently inherits the buggy realtime path — warn on absent AND on explicit nonzero.
+export const texCoordTimeFactorValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const doc = pkg.files.backgrounds;
+  if (doc.loadError || doc.missing || !doc.root) return out;
+  const tcs = doc.root.TexCoords;
+  if (!tcs || typeof tcs !== 'object') return out;
+  for (const name of Object.keys(tcs)) {
+    const tf = tcs[name]?.timeFactor;
+    if (tf === undefined) {
+      out.push({
+        severity: 'warning', category: 'texcoord-timefactor',
+        message: `TexCoord "${name}" has no timeFactor — the engine defaults it to 1 (realtime), but only 0 is reliable (known engine shader int/float bug). Set it to 0.`,
+        file: 'backgrounds', jsonPath: ['TexCoords', name],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:texcoords', name } },
+      });
+    } else if (typeof tf === 'number' && tf !== 0) {
+      out.push({
+        severity: 'warning', category: 'texcoord-timefactor',
+        message: `TexCoord "${name}" has timeFactor=${tf} — only 0 is reliable (known engine shader int/float bug).`,
+        file: 'backgrounds', jsonPath: ['TexCoords', name, 'timeFactor'],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:texcoords', name } },
+      });
+    }
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator, bordersLayerImageValidator, rcMarksValidator, texCoordTimeFactorValidator];
 
 export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
   return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));

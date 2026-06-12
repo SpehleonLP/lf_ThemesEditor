@@ -10,7 +10,7 @@ const FIELDS: [string, string, boolean, string][] = [
   ['scrollFactor', 'scrollFactor x,y', true, '0,0'],
   ['scaleFactor', 'scaleFactor x,y (bigger = more repeats)', true, '1,1'],
   ['initialTime', 'initialTime (sec)', false, '0'],
-  ['timeFactor', 'timeFactor (0 = static, 1 = realtime)', false, '1'],
+  ['timeFactor', 'timeFactor (only 0 is reliable — known engine bug)', false, '0'],
 ];
 let _host: HTMLElement | null = null; let _deps: BgFormDeps | null = null;
 const entryOf = () => { const n = bgState.selected.texcoords; return n ? _deps!.file.root.TexCoords?.[n] : null; };
