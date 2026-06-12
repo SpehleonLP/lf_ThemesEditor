@@ -30,7 +30,14 @@ export function mountCurveForm(h: HTMLElement, d: RcFormDeps): void {
       const play = document.createElement('button'); play.className = 'rc-play'; play.textContent = '▶'; play.title = 'Preview';
       play.dataset.slot = slot;
       play.addEventListener('click', (e) => { e.preventDefault(); const v = (curveOf()?.[slot] ?? ''); if (v) setTrigger({ kind: 'event', name: v }); });
-      row.append(name, sel, play); fs.appendChild(row);
+      const go = document.createElement('button'); go.className = 'ro-go'; go.textContent = '↗'; go.title = 'go to event';
+      go.setAttribute('aria-label', 'Go to event');
+      go.addEventListener('click', (e) => {
+        e.preventDefault();
+        const v = curveOf()?.[slot];
+        if (v) deps!.ctx().navigate({ surface: 'responseCurves', entry: { ns: 'rc:events', name: v } });
+      });
+      row.append(name, sel, play, go); fs.appendChild(row);
     }
     return fs;
   };

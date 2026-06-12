@@ -21,7 +21,15 @@ export function mountEventForm(h: HTMLElement, d: RcFormDeps): void {
     const name = document.createElement('span'); name.className = 'rc-slot-name'; name.textContent = `${key} (${CHANNELS[key].table})`;
     const sel = document.createElement('select'); sel.dataset.ch = key;
     sel.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (sel.value) ev[key] = sel.value; else delete ev[key]; deps!.markDirty(); rcNotify(); });
-    row.append(name, sel); fs.appendChild(row);
+    const go = document.createElement('button'); go.className = 'ro-go'; go.textContent = '↗'; go.title = 'go to definition';
+    go.setAttribute('aria-label', 'Go to definition');
+    go.addEventListener('click', (e) => {
+      e.preventDefault();
+      const ref = eventOf()?.[key];
+      const ns = CHANNELS[key].ns;
+      if (ref && ns) deps!.ctx().navigate({ surface: 'responseCurves', entry: { ns, name: ref } });
+    });
+    row.append(name, sel, go); fs.appendChild(row);
   }
   h.appendChild(fs);
 

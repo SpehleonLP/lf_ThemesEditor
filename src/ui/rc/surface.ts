@@ -122,7 +122,11 @@ export function createResponseCurvesSurface(rcFile: FileDoc, onDirty: () => void
     if (tab === 'curves') mountCurveForm(editorHost, formDeps());
     else if (tab === 'events') mountEventForm(editorHost, formDeps());
     else if (tab === 'sounds') mountSoundForm(editorHost, formDeps());
-    else if (tab === 'gradients') mountRcGradientForm(editorHost, formDeps());
+    else if (tab === 'gradients') {
+      const sel = rcState.selected.gradients;
+      if (sel) setTrigger({ kind: 'gradient', name: sel });
+      mountRcGradientForm(editorHost, formDeps());
+    }
     else {
       const d = splineMarksDeps(tab as 'splines1d' | 'splines2d');
       const sel = rcState.selected[tab];
