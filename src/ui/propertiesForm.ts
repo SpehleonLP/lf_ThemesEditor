@@ -2,10 +2,11 @@
 import { state, notify } from './state';
 import type { FillMode } from '../types';
 
-const FILLS = ['STRETCH', 'TILE', 'SNAP', 'FLEXIBLE', 'CENTER'];
+const FILLS: readonly FillMode[] = ['STRETCH', 'TILE', 'SNAP', 'FLEXIBLE', 'CENTER'];
 
 // One-line description per fill mode, shown under the EdgeFill/CenterFill selects. SNAP verbatim.
-const FILL_DESC: Record<string, string> = {
+// Typed Record<FillMode, string> so every mode is provably covered (no '' fallback needed below).
+const FILL_DESC: Record<FillMode, string> = {
   STRETCH: "Stretches the band's pixels to fill the available space.",
   TILE: 'Repeats the band at native size to fill the space.',
   FLEXIBLE: 'Grows only as needed; otherwise keeps native size.',
@@ -138,8 +139,8 @@ export function updateGeometryFields(): void {
   });
 
   // Fill-mode descriptions for the active edge/center selection. If x and y differ, show both.
-  const describe = (x: string, y: string): string =>
-    x === y ? (FILL_DESC[x] ?? '') : `x: ${FILL_DESC[x] ?? x}  ·  y: ${FILL_DESC[y] ?? y}`;
+  const describe = (x: FillMode, y: FillMode): string =>
+    x === y ? FILL_DESC[x] : `x: ${FILL_DESC[x]}  ·  y: ${FILL_DESC[y]}`;
   const edgeDesc = _host.querySelector<HTMLElement>('[data-desc="edge"]');
   const centerDesc = _host.querySelector<HTMLElement>('[data-desc="center"]');
   if (edgeDesc) edgeDesc.textContent = describe(L.edgeFill[0], L.edgeFill[1]);

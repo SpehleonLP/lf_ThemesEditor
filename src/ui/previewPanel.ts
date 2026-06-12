@@ -147,6 +147,8 @@ export function mountPreview(host: HTMLElement): void {
   });
 
   wireGestures(stage);
+  // Order is load-bearing: wireResize MUST be registered before wireOverlayDrag — resize relies on
+  // listener order + stopImmediatePropagation to suppress the expansion drag on the same canvas.
   wireResize();
   wireOverlayDrag();
 
@@ -205,9 +207,13 @@ function wireGestures(stage: HTMLElement): void {
 // Conflict avoidance with Task 3.2 Expansion handles: Expansion owns the layout-rect EDGE MIDPOINTS
 // (drawn when toggles.expansion is on). We therefore put the primary resize handle on the CORNER
 // (never used by Expansion) and only offer edge-resize when expansion is OFF, so the two never collide.
-// Resize is hit-tested BEFORE the expansion hit-test in the overlay pointerdown handler.
+// Resize and expansion are SEPARATE pointerdown listeners on the same canvas; resize wins via
+// listener-order + stopImmediatePropagation (it's registered first), not via one ordered hit-test.
 type ResizeKind = 'corner' | 'edge-r' | 'edge-b';
 let resizeKind: ResizeKind | null = null;
+// True while a resize gesture holds a pointer. The overlay-drag pointerdown early-outs on this so a
+// second (multi-touch) pointer can't start a concurrent expansion drag while a resize is in flight.
+let resizing = false;
 
 // Layout-rect corner in world pt. The layout-rect right edge sits at world x = panel.w + exp.l and
 // bottom at world y = panel.h + exp.t (since qw - exp.r = panel.w + exp.l). Returns the screen-px
@@ -241,18 +247,24 @@ function hitResize(sx: number, sy: number): ResizeKind | null {
 }
 
 function cursorForResize(k: ResizeKind): string {
-  return k === 'corner' ? 'nwse-resize' : k === 'edge-r' ? 'ew-resize' : 'ns-resize';
+  switch (k) {
+    case 'corner': return 'nwse-resize';
+    case 'edge-r': return 'ew-resize';
+    case 'edge-b': return 'ns-resize';
+  }
 }
 
 // Apply a resize drag: convert the world point under the cursor to a new panel size and sync inputs.
 function applyResize(k: ResizeKind, wx: number, wy: number, exp: Vec4): void {
   const MIN = 8;
-  if (k === 'corner' || k === 'edge-r') panel[0] = Math.max(MIN, wx - exp[0]);
-  if (k === 'corner' || k === 'edge-b') panel[1] = Math.max(MIN, wy - exp[1]);
+  // Round `panel` itself (not just the displayed input) so the input value and `panel` never diverge.
+  // Otherwise the input's onchange rerun() would read the rounded value back and snap the size mid-drag.
+  if (k === 'corner' || k === 'edge-r') panel[0] = Math.round(Math.max(MIN, wx - exp[0]));
+  if (k === 'corner' || k === 'edge-b') panel[1] = Math.round(Math.max(MIN, wy - exp[1]));
   const wIn = mountHost?.querySelector<HTMLInputElement>('#pv-w');
   const hIn = mountHost?.querySelector<HTMLInputElement>('#pv-h');
-  if (wIn) wIn.value = String(Math.round(panel[0]));
-  if (hIn) hIn.value = String(Math.round(panel[1]));
+  if (wIn) wIn.value = String(panel[0]);
+  if (hIn) hIn.value = String(panel[1]);
 }
 
 function wireResize(): void {
@@ -261,6 +273,7 @@ function wireResize(): void {
 
   cv.addEventListener('pointerdown', (e: PointerEvent) => {
     if (e.button !== 0 || e.shiftKey) return;
+    if (dragModel) return; // an expansion/overlay drag holds a pointer → don't start a concurrent resize
     const s = screenPt(e);
     const k = hitResize(s.x, s.y);
     if (!k) return; // no resize handle here → let the overlay/expansion drag or pan handle it
@@ -269,6 +282,7 @@ function wireResize(): void {
     // this prevents the expansion/overlay drag pointerdown (a sibling listener) from also firing.
     e.stopImmediatePropagation();
     resizeKind = k;
+    resizing = true;
     cv.setPointerCapture(e.pointerId);
   });
 
@@ -290,6 +304,7 @@ function wireResize(): void {
   const end = (e: PointerEvent) => {
     if (!resizeKind) return;
     resizeKind = null;
+    resizing = false;
     if (cv.hasPointerCapture(e.pointerId)) cv.releasePointerCapture(e.pointerId);
   };
   cv.addEventListener('pointerup', end);
@@ -316,6 +331,7 @@ function wireOverlayDrag(): void {
 
   cv.addEventListener('pointerdown', (e: PointerEvent) => {
     if (e.button !== 0 || e.shiftKey) return; // shift/middle = pan (handled by stage) → let it through
+    if (resizing) return; // a resize gesture holds a pointer → don't start a concurrent overlay drag
     const entry = state.doc && state.selected ? state.doc.root[state.selected] : null;
     if (!entry) return;
     const model = buildOverlayModel();
