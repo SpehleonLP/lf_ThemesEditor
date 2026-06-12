@@ -1,6 +1,6 @@
 import { state, notify, type LayerName } from './state';
 import { ninePatchGrid } from '../cells';
-import type { EditorCell } from '../types';
+import type { EditorCell, Rgba } from '../types';
 
 const HANDLE = 6; // px, screen-space
 
@@ -10,19 +10,20 @@ const view: View = { zoom: 1, ox: 20, oy: 20 };
 // null = normal rect mode; non-null = 9-patch quick mode (two draggable cut lines per axis).
 let ninePatch: { xCuts: [number, number]; yCuts: [number, number] } | null = null;
 
-let imageCanvas: HTMLCanvasElement | null = null;
-let imageFor: string | null = null;
+// Decoded display image, cached per Rgba identity. The same Rgba buffer is reused across
+// notify()s/redraws while a border stays selected, so identity keying avoids re-decoding.
+const imageCanvasCache = new WeakMap<Rgba, HTMLCanvasElement>();
 
 function ensureImageCanvas(): HTMLCanvasElement | null {
-  const layer = state.layers?.[state.activeLayer];
-  if (!layer?.image) return null;
-  const key = `${state.selected}/${state.activeLayer}`;
-  if (imageCanvas && imageFor === key) return imageCanvas;
+  const image = state.layers?.[state.activeLayer]?.image;
+  if (!image) return null;
+  const cached = imageCanvasCache.get(image);
+  if (cached) return cached;
   const c = document.createElement('canvas');
-  c.width = layer.image.width; c.height = layer.image.height;
-  const id = new ImageData(new Uint8ClampedArray(layer.image.data), c.width, c.height);
+  c.width = image.width; c.height = image.height;
+  const id = new ImageData(new Uint8ClampedArray(image.data), c.width, c.height);
   c.getContext('2d')!.putImageData(id, 0, 0); // display only — pixels never read back
-  imageCanvas = c; imageFor = key;
+  imageCanvasCache.set(image, c);
   return c;
 }
 
@@ -34,7 +35,9 @@ type DragMode =
   | { kind: 'move' }
   | { kind: 'handle'; hx: 0 | 1 | -1; hy: 0 | 1 | -1 }
   | { kind: 'cut'; axis: 'x' | 'y'; index: 0 | 1 };
-let drag: { mode: DragMode; lastX: number; lastY: number } | null = null;
+// `changed` tracks whether the drag mutated cell rects (vs a view-only pan), so pointerup
+// commits (dirty + notify) exactly once and only when something actually changed.
+let drag: { mode: DragMode; lastX: number; lastY: number; changed: boolean } | null = null;
 
 function cellAt(ix: number, iy: number): [number, number] | null {
   const cells = state.layers?.[state.activeLayer]?.cells;
@@ -70,6 +73,8 @@ function editTargets(): EditorCell[] {
   return out;
 }
 
+// Mutate the in-memory rect(s) only. Caller (pointermove) redraws directly; the commit
+// (state.dirty + notify) happens once on pointerup, not here.
 function applyDrag(dxImg: number, dyImg: number, mode: DragMode): void {
   for (const cell of editTargets()) {
     const r = cell.rect;
@@ -83,7 +88,6 @@ function applyDrag(dxImg: number, dyImg: number, mode: DragMode): void {
     }
     for (let i = 0; i < 4; ++i) r[i] = Math.round(r[i]);
   }
-  state.dirty = true;
 }
 
 function activeImage(): { width: number; height: number } | null {
@@ -157,44 +161,54 @@ function dragCut(mode: Extract<DragMode, { kind: 'cut' }>, ix: number, iy: numbe
   }
 }
 
-export function renderRectEditor(host: HTMLElement): void {
+// --- Panel: built once via mountCellsPanel, refreshed in place via updateCellsPanel. ---
+
+let canvas: HTMLCanvasElement | null = null;
+let linkedInput: HTMLInputElement | null = null;
+let mxInput: HTMLInputElement | null = null;
+let myInput: HTMLInputElement | null = null;
+let npEnterBtn: HTMLButtonElement | null = null;
+let npApplyBtn: HTMLButtonElement | null = null;
+let npCancelBtn: HTMLButtonElement | null = null;
+let readoutEl: HTMLElement | null = null;
+
+export function mountCellsPanel(host: HTMLElement): void {
   host.innerHTML = `
     <div style="padding:4px;display:flex;gap:8px;align-items:center">
       <button data-layer="overlay">Overlay</button><button data-layer="mask">Mask</button>
       <label><input type="checkbox" id="linked"> linked layout</label>
       <label><input type="checkbox" id="mirror-x"> mirror X</label>
       <label><input type="checkbox" id="mirror-y"> mirror Y</label>
-      ${ninePatch
-        ? `<button id="np-apply">Apply</button><button id="np-cancel">Cancel</button>`
-        : `<button id="np-enter">9-patch</button>`}
+      <button id="np-enter">9-patch</button>
+      <button id="np-apply">Apply</button>
+      <button id="np-cancel">Cancel</button>
       <span id="readout" style="margin-left:auto;font-family:monospace"></span>
     </div>
     <canvas id="rect-canvas" style="display:block;background:#333"></canvas>`;
-  const canvas = host.querySelector<HTMLCanvasElement>('#rect-canvas')!;
+  canvas = host.querySelector<HTMLCanvasElement>('#rect-canvas')!;
   canvas.width = host.clientWidth || 800;
   canvas.height = (host.clientHeight || 600) - 30;
 
   host.querySelectorAll<HTMLButtonElement>('button[data-layer]').forEach((b) => {
     b.onclick = () => { ninePatch = null; state.activeLayer = b.dataset.layer as LayerName; notify(); };
   });
-  const linked = host.querySelector<HTMLInputElement>('#linked')!;
-  linked.checked = state.linked;
-  linked.onchange = () => { state.linked = linked.checked; notify(); };
-  const mx = host.querySelector<HTMLInputElement>('#mirror-x')!;
-  const my = host.querySelector<HTMLInputElement>('#mirror-y')!;
-  const selCell = state.selectedCell && state.layers?.[state.activeLayer]?.cells?.[state.selectedCell[0]]?.[state.selectedCell[1]];
-  mx.checked = !!selCell?.mirrorX; my.checked = !!selCell?.mirrorY;
-  mx.onchange = () => { for (const c of editTargets()) c.mirrorX = mx.checked; state.dirty = true; notify(); };
-  my.onchange = () => { for (const c of editTargets()) c.mirrorY = my.checked; state.dirty = true; notify(); };
+  linkedInput = host.querySelector<HTMLInputElement>('#linked')!;
+  linkedInput.onchange = () => { state.linked = linkedInput!.checked; notify(); };
+  mxInput = host.querySelector<HTMLInputElement>('#mirror-x')!;
+  myInput = host.querySelector<HTMLInputElement>('#mirror-y')!;
+  mxInput.onchange = () => { for (const c of editTargets()) c.mirrorX = mxInput!.checked; state.dirty = true; notify(); };
+  myInput.onchange = () => { for (const c of editTargets()) c.mirrorY = myInput!.checked; state.dirty = true; notify(); };
 
-  const npEnter = host.querySelector<HTMLButtonElement>('#np-enter');
-  if (npEnter) { npEnter.disabled = !activeImage(); npEnter.onclick = enterNinePatch; }
-  const npApply = host.querySelector<HTMLButtonElement>('#np-apply');
-  if (npApply) npApply.onclick = applyNinePatch;
-  const npCancel = host.querySelector<HTMLButtonElement>('#np-cancel');
-  if (npCancel) npCancel.onclick = cancelNinePatch;
+  npEnterBtn = host.querySelector<HTMLButtonElement>('#np-enter')!;
+  npEnterBtn.onclick = enterNinePatch;
+  npApplyBtn = host.querySelector<HTMLButtonElement>('#np-apply')!;
+  npApplyBtn.onclick = applyNinePatch;
+  npCancelBtn = host.querySelector<HTMLButtonElement>('#np-cancel')!;
+  npCancelBtn.onclick = cancelNinePatch;
+  readoutEl = host.querySelector<HTMLElement>('#readout')!;
 
-  canvas.onwheel = (e) => {
+  const c = canvas;
+  c.onwheel = (e) => {
     e.preventDefault();
     const f = e.deltaY < 0 ? 1.25 : 0.8;
     const [ix, iy] = toImage(e.offsetX, e.offsetY);
@@ -202,37 +216,79 @@ export function renderRectEditor(host: HTMLElement): void {
     view.zoom = Math.max(0.05, Math.min(64, view.zoom));
     view.ox = e.offsetX - ix * view.zoom;
     view.oy = e.offsetY - iy * view.zoom;
-    draw(canvas);
+    draw(c); // view-only: never dirty, never notify
   };
-  canvas.onmousedown = (e) => {
+
+  c.onpointerdown = (e) => {
     if (ninePatch !== null) {
-      if (e.button === 1 || e.shiftKey) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY }; return; }
+      if (e.button === 1 || e.shiftKey) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY, changed: false }; c.setPointerCapture(e.pointerId); return; }
       const cut = hitCut(e.offsetX, e.offsetY);
       drag = cut
-        ? { mode: cut, lastX: e.offsetX, lastY: e.offsetY }
-        : { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY };
+        ? { mode: cut, lastX: e.offsetX, lastY: e.offsetY, changed: false }
+        : { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY, changed: false };
+      c.setPointerCapture(e.pointerId);
       return;
     }
     const cells = state.layers?.[state.activeLayer]?.cells;
-    if (e.button === 1 || e.shiftKey || !cells) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY }; return; }
+    if (e.button === 1 || e.shiftKey || !cells) { drag = { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY, changed: false }; c.setPointerCapture(e.pointerId); return; }
     const sel = state.selectedCell && cells[state.selectedCell[0]][state.selectedCell[1]];
     const h = sel && hitHandle(sel.rect, e.offsetX, e.offsetY);
-    if (h) { drag = { mode: h, lastX: e.offsetX, lastY: e.offsetY }; return; }
+    if (h) { drag = { mode: h, lastX: e.offsetX, lastY: e.offsetY, changed: false }; c.setPointerCapture(e.pointerId); return; }
     const [ix, iy] = toImage(e.offsetX, e.offsetY);
     state.selectedCell = cellAt(ix, iy);
-    drag = state.selectedCell ? { mode: { kind: 'move' }, lastX: e.offsetX, lastY: e.offsetY } : { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY };
-    notify();
+    drag = state.selectedCell ? { mode: { kind: 'move' }, lastX: e.offsetX, lastY: e.offsetY, changed: false } : { mode: { kind: 'pan' }, lastX: e.offsetX, lastY: e.offsetY, changed: false };
+    c.setPointerCapture(e.pointerId);
+    notify(); // selection change: commit so other panels reflect the new selectedCell
   };
-  canvas.onmousemove = (e) => {
+
+  c.onpointermove = (e) => {
     if (!drag) return;
     const dx = e.offsetX - drag.lastX, dy = e.offsetY - drag.lastY;
     drag.lastX = e.offsetX; drag.lastY = e.offsetY;
-    if (drag.mode.kind === 'pan') { view.ox += dx; view.oy += dy; }
-    else if (drag.mode.kind === 'cut') { const [ix, iy] = toImage(e.offsetX, e.offsetY); dragCut(drag.mode, ix, iy); }
-    else applyDrag(dx / view.zoom, dy / view.zoom, drag.mode);
-    draw(canvas);
+    if (drag.mode.kind === 'pan') { view.ox += dx; view.oy += dy; } // view-only
+    else if (drag.mode.kind === 'cut') { const [ix, iy] = toImage(e.offsetX, e.offsetY); dragCut(drag.mode, ix, iy); drag.changed = true; }
+    else { applyDrag(dx / view.zoom, dy / view.zoom, drag.mode); drag.changed = true; }
+    draw(c); // mutate in-memory only; commit happens on pointerup
   };
-  canvas.onmouseup = () => { drag = null; notify(); };
+
+  const endDrag = (e: PointerEvent) => {
+    if (!drag) return;
+    const changed = drag.changed;
+    drag = null;
+    if (c.hasPointerCapture(e.pointerId)) c.releasePointerCapture(e.pointerId);
+    // Commit once, only if a rect/cut actually changed. Pan-only and pure selection
+    // (already notified on pointerdown) don't re-commit here.
+    if (changed) { state.dirty = true; notify(); }
+  };
+  c.onpointerup = endDrag;
+  c.onpointercancel = endDrag;
+
+  draw(c);
+}
+
+// Cheap in-place refresh: resize canvas if image dims changed, sync toolbar control
+// states without rebuilding the DOM, toggle 9-patch toolbar, then redraw.
+export function updateCellsPanel(): void {
+  if (!canvas) return;
+  // Keep canvas sized to host (host may have resized between updates).
+  const host = canvas.parentElement;
+  if (host) {
+    const w = host.clientWidth || 800;
+    const h = (host.clientHeight || 600) - 30;
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+  }
+
+  if (linkedInput) linkedInput.checked = state.linked;
+  const selCell = state.selectedCell && state.layers?.[state.activeLayer]?.cells?.[state.selectedCell[0]]?.[state.selectedCell[1]];
+  if (mxInput) mxInput.checked = !!selCell?.mirrorX;
+  if (myInput) myInput.checked = !!selCell?.mirrorY;
+
+  // 9-patch toolbar visibility tracks `ninePatch` (a value-state, refreshed in place).
+  const inNp = ninePatch !== null;
+  if (npEnterBtn) { npEnterBtn.style.display = inNp ? 'none' : ''; npEnterBtn.disabled = !activeImage(); }
+  if (npApplyBtn) npApplyBtn.style.display = inNp ? '' : 'none';
+  if (npCancelBtn) npCancelBtn.style.display = inNp ? '' : 'none';
 
   draw(canvas);
 }
@@ -251,8 +307,7 @@ function drawNinePatch(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement | n
     const [, sy] = toScreen(0, cy);
     ctx.beginPath(); ctx.moveTo(view.ox, sy); ctx.lineTo(view.ox + w, sy); ctx.stroke();
   }
-  const readout = document.getElementById('readout');
-  if (readout) readout.textContent =
+  if (readoutEl) readoutEl.textContent =
     `9-patch  x=[${ninePatch.xCuts.join(', ')}]  y=[${ninePatch.yCuts.join(', ')}]`;
 }
 
@@ -269,8 +324,7 @@ function draw(canvas: HTMLCanvasElement): void {
   }
 
   const cells = state.layers?.[state.activeLayer]?.cells;
-  const readout = document.getElementById('readout');
-  if (!cells) { if (readout) readout.textContent = 'no cells (layer is #COPY or absent)'; return; }
+  if (!cells) { if (readoutEl) readoutEl.textContent = 'no cells (layer is #COPY or absent)'; return; }
 
   for (let y = 0; y < 5; ++y)
     for (let x = 0; x < 5; ++x) {
@@ -285,7 +339,7 @@ function draw(canvas: HTMLCanvasElement): void {
         ctx.fillStyle = '#ff0';
         for (const [hx, hy] of [[ax, ay], [bx, ay], [ax, by], [bx, by]] as const)
           ctx.fillRect(hx - HANDLE / 2, hy - HANDLE / 2, HANDLE, HANDLE);
-        if (readout) readout.textContent =
+        if (readoutEl) readoutEl.textContent =
           `cell[${y}][${x}] = [${c.rect.join(', ')}]${c.mirrorX ? ' ⇋x' : ''}${c.mirrorY ? ' ⇋y' : ''}`;
       }
     }
