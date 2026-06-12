@@ -5,7 +5,7 @@ import type { FileDoc } from '../../package/model';
 import { wrapBordersRoot, applyLayerToEntry } from '../../document';
 import { state, notify, subscribe, structuralKey, type Panel } from '../state';
 import { selectBorder } from '../main';
-import { renderBorderList } from '../borderList';
+import { mountSlotList, updateSlotList } from '../slotList';
 import { mountCellsPanel, updateCellsPanel } from '../rectEditor';
 import { mountGeometryFields, updateGeometryFields } from '../propertiesForm';
 import { mountPreview, updatePreview } from '../previewPanel';
@@ -26,6 +26,9 @@ export function flushLayers(): void {
 
 export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void): Surface {
   let built = false;
+  // Latest SurfaceContext (index + issues) captured from mount/refresh, so the slot list can read
+  // shared-sheet counts and per-border severities even though the Panel interface doesn't carry it.
+  let lastCtx: SurfaceContext | null = null;
 
   function buildOnce(host: HTMLElement): void {
     host.replaceChildren();
@@ -53,7 +56,7 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
     const exportHost = host.querySelector<HTMLElement>('#export-host')!;
 
     const panels: Panel[] = [
-      { host: list, mount(h) { renderBorderList(h, (n) => void selectBorder(n)); }, update() { renderBorderList(this.host, (n) => void selectBorder(n)); } },
+      { host: list, mount(h) { mountSlotList(h, { getCtx: () => lastCtx, onSelect: (n) => void selectBorder(n), onMutate: () => notify() }); }, update() { updateSlotList(); } },
       { host: editor, mount: mountCellsPanel, update: updateCellsPanel },
       { host: props, mount: mountGeometryFields, update: updateGeometryFields },
       { host: previewHost, mount: mountPreview, update: updatePreview },
@@ -79,10 +82,13 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
   return {
     key: 'borders',
     label: 'Borders', icon: '▥',
-    mount(host, _ctx: SurfaceContext) {
+    mount(host, ctx: SurfaceContext) {
+      lastCtx = ctx;
       if (!built) buildOnce(host);
     },
-    refresh() { /* borders pane re-renders via its own notify(); nothing to do */ },
+    // Validation re-ran: capture fresh ctx (new index + issues) and drive a notify() so the slot
+    // list's update() recomputes shared-sheet badges and per-border severity dots in place.
+    refresh(ctx: SurfaceContext) { lastCtx = ctx; notify(); },
     reveal(entry?: NavTarget['entry']) {
       if (entry?.name && state.doc?.root[entry.name]) void selectBorder(entry.name);
     },

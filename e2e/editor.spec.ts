@@ -217,3 +217,41 @@ test('borders: 5×5-lines mode live line-drag commits + round-trips through save
   await enter5x5();
   expect(await xLine1()).toBe(dragged);
 });
+
+test('borders: slot list add/delete + shared-sheet badge', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto('/');
+  await expect(page.locator('.borders-surface')).toBeVisible();
+
+  // (c) A border whose Overlay image is shared by >= 2 borders shows the ⛓N badge with N >= 2.
+  // In the live data Slider_0 and Slider_1 both use Images/circle_border.png as their Overlay.
+  const sliderRow = page.locator('.sl-row', { has: page.locator('.sl-name', { hasText: /^Slider_0$/ }) });
+  await expect(sliderRow).toBeVisible();
+  const badge = sliderRow.locator('.sl-badge');
+  await expect(badge).toBeVisible();
+  const badgeText = (await badge.textContent()) ?? '';
+  const n = Number(badgeText.replace(/[^0-9]/g, ''));
+  expect(n).toBeGreaterThanOrEqual(2);
+  expect(badgeText).toContain('⛓');
+
+  // (a) Adding an unused slot via the dropdown inserts a row that becomes selected and enables Save.
+  const saveBtn = page.locator('.tb-btn', { hasText: 'Save' });
+  await expect(saveBtn).toBeDisabled();
+
+  // Pick the first unused name offered by the add-slot select (skip the placeholder option).
+  const addSelect = page.locator('.sl-add-select');
+  const newName = await addSelect.locator('option').nth(1).getAttribute('value');
+  if (!newName) throw new Error('no unused border name available to add');
+  await addSelect.selectOption(newName);
+
+  const newRow = page.locator('.sl-row', { has: page.locator('.sl-name', { hasText: new RegExp(`^${newName}$`) }) });
+  await expect(newRow).toBeVisible();
+  await expect(newRow).toHaveClass(/sl-selected/);
+  await expect(saveBtn).toBeEnabled();
+
+  // (b) Deleting that slot removes its row. Accept the confirm() dialog.
+  page.once('dialog', (d) => void d.accept());
+  await newRow.hover();
+  await newRow.locator('.sl-del').click();
+  await expect(newRow).toHaveCount(0);
+});

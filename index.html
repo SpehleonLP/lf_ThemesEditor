@@ -25,7 +25,28 @@
     .surface-host { height: 100%; }
     .borders-surface { display: grid; grid-template-columns: 230px 1fr 1fr; grid-template-rows: 1fr auto; height: 100%; }
     .borders-surface > * { overflow: auto; min-width: 0; }
-    .bs-slots { grid-column: 1; grid-row: 1; border-right: 1px solid #2a2a33; }
+    .bs-slots { grid-column: 1; grid-row: 1; border-right: 1px solid #2a2a33; display: flex; flex-direction: column; min-height: 0; }
+    .sl-rows { flex: 1; overflow: auto; min-height: 0; }
+    .sl-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; cursor: pointer; border-bottom: 1px solid #1f1f27; }
+    .sl-row:hover { background: rgba(140,120,220,.08); }
+    .sl-row.sl-selected { background: #2d4a63; }
+    .sl-thumb { flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid #2a2a33; border-radius: 3px;
+      background: repeating-conic-gradient(#1a1a22 0% 25%, #14141a 0% 50%) 50% / 8px 8px;
+      display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .sl-thumb canvas { image-rendering: pixelated; display: block; }
+    .sl-thumb-empty { background: repeating-conic-gradient(#1a1a22 0% 25%, #14141a 0% 50%) 50% / 8px 8px; }
+    .sl-name { flex: 1; min-width: 0; font: 12px 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sl-badge { font: 11px 'JetBrains Mono', monospace; color: #cbb8ff; background: rgba(140,120,220,.16);
+      border: 1px solid #46a; border-radius: 8px; padding: 0 6px; flex: none; }
+    .sl-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+    .sl-del { flex: none; background: none; border: 1px solid #33333d; border-radius: 3px; color: #888;
+      cursor: pointer; font-size: 11px; line-height: 1; padding: 1px 5px; opacity: 0; }
+    .sl-row:hover .sl-del { opacity: 1; }
+    .sl-del:hover { color: #e0564a; border-color: #5a2a2a; }
+    .sl-add { padding: 6px 8px; border-top: 1px solid #2a2a33; }
+    .sl-add-select { width: 100%; background: #1a1a22; color: #ddd; border: 1px solid #33333d;
+      border-radius: 4px; padding: 4px 6px; cursor: pointer; font: 12px 'JetBrains Mono', monospace; }
+    .sl-add-select:disabled { opacity: .5; cursor: default; }
     .bs-cells { grid-column: 2; grid-row: 1; }
     .bs-preview { grid-column: 3; grid-row: 1; border-left: 1px solid #2a2a33; }
     /* Preview stage: GL border canvas with a transparent 2D guide overlay stacked exactly atop it.
