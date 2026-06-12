@@ -1,8 +1,9 @@
 import { parseCellsJson, toEditorGrid, resolveInfinity } from '../cells';
 import { loadImage } from '../images';
 import { state, notify, type LayerState } from './state';
-import type { FillMode } from '../types';
+import type { FillMode, Rgba } from '../types';
 import { resetGridMode } from './rectEditor';
+import { editorSourceCells, type EditorSource } from '../editorReadback';
 
 async function loadLayer(entry: any, key: 'Mask' | 'Overlay'): Promise<LayerState> {
   const ls: LayerState = { imagePath: null, image: null, cells: null, edgeFill: ['STRETCH', 'STRETCH'] as [FillMode, FillMode], centerFill: ['STRETCH', 'STRETCH'] as [FillMode, FillMode] };
@@ -23,9 +24,91 @@ async function loadLayer(entry: any, key: 'Mask' | 'Overlay'): Promise<LayerStat
   return ls;
 }
 
+// Read an entry's per-layer fill modes (EdgeFill/CenterFill) for read-back, defaulting to STRETCH.
+function fillsFor(entry: any, key: 'Mask' | 'Overlay'): { edgeFill: [FillMode, FillMode]; centerFill: [FillMode, FillMode] } {
+  const raw = entry?.[key];
+  const def: [FillMode, FillMode] = ['STRETCH', 'STRETCH'];
+  if (raw == null || typeof raw === 'string') return { edgeFill: [...def], centerFill: [...def] };
+  const edgeFill = raw.EdgeFill
+    ? [String(raw.EdgeFill[0]).toUpperCase(), String(raw.EdgeFill[1]).toUpperCase()] as [FillMode, FillMode]
+    : [...def] as [FillMode, FillMode];
+  const centerFill = raw.CenterFill
+    ? [String(raw.CenterFill[0]).toUpperCase(), String(raw.CenterFill[1]).toUpperCase()] as [FillMode, FillMode]
+    : [...def] as [FillMode, FillMode];
+  return { edgeFill, centerFill };
+}
+
+// Build overlay+mask LayerStates from an EditorSource (the original source-space layout), using
+// the injected loader for images. Returns null to signal the caller to fall back to the packed
+// sheet when any REQUIRED source image fails to load. Pure-ish: no DOM, loader is injectable.
+export async function buildSourceLayers(
+  entry: any,
+  es: EditorSource,
+  load: (path: string) => Promise<Rgba>,
+): Promise<{ mask: LayerState; overlay: LayerState } | null> {
+  try {
+    const overlayImage = es.source.overlay ? await load(es.source.overlay) : null;
+    const maskImage = es.source.mask ? await load(es.source.mask) : null;
+
+    const oFills = fillsFor(entry, 'Overlay');
+    const overlay: LayerState = {
+      imagePath: es.source.overlay ?? null,
+      image: overlayImage,
+      cells: es.sourceCells,
+      edgeFill: oFills.edgeFill,
+      centerFill: oFills.centerFill,
+    };
+
+    const mFills = fillsFor(entry, 'Mask');
+    const mask: LayerState = es.source.mask
+      ? {
+          imagePath: es.source.mask,
+          image: maskImage,
+          // linked layouts share one source layout → clone so edits don't alias overlay's grid.
+          cells: es.source.linked ? structuredClone(es.sourceCells) : es.sourceCells,
+          edgeFill: mFills.edgeFill,
+          centerFill: mFills.centerFill,
+        }
+      : {
+          // No mask source → mask mirrors overlay (#COPY semantics): copy image + clone cells.
+          imagePath: es.source.overlay ?? null,
+          image: overlayImage,
+          cells: structuredClone(es.sourceCells),
+          edgeFill: mFills.edgeFill,
+          centerFill: mFills.centerFill,
+        };
+
+    return { mask, overlay };
+  } catch (e) {
+    console.warn('buildSourceLayers: source image failed to load, falling back to packed sheet:', e);
+    return null;
+  }
+}
+
 export async function selectBorder(name: string): Promise<void> {
   if (!state.doc) return;
   const entry = state.doc.root[name];
+
+  // If this border carries valid Editor metadata, reopen from the SOURCE space (the re-edit loop:
+  // pack writes Editor → re-select rebuilds source layers). Falls back to the packed sheet below
+  // when there is no Editor meta (all current live borders) or a source image fails to load.
+  const es = editorSourceCells(entry);
+  if (es) {
+    const built = await buildSourceLayers(entry, es, loadImage);
+    if (built) {
+      resetGridMode();
+      state.selected = name;
+      state.layers = built;
+      state.selectedCell = null;
+      state.editingSource = true;
+      state.saveStatus = null; // reopening from source is not an edit → no dirty
+      notify();
+      return;
+    }
+    // Source load failed: warn and fall through to the packed-sheet path.
+    state.saveStatus = '<span style="color:#d6a13a">⚠ source image failed to load — editing packed sheet</span>';
+  }
+
   const [mask, overlay] = await Promise.all([
     loadLayer(entry, 'Mask'),
     loadLayer(entry, 'Overlay'),
@@ -37,6 +120,7 @@ export async function selectBorder(name: string): Promise<void> {
   state.selected = name;
   state.layers = { mask, overlay };
   state.selectedCell = null;
-  state.saveStatus = null;
+  state.editingSource = false;
+  if (!es) state.saveStatus = null; // preserve the source-load-failed warning when es was present
   notify();
 }

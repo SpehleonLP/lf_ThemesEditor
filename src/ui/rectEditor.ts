@@ -280,6 +280,8 @@ let mode3x3Btn: HTMLButtonElement | null = null;
 let mode5x5Btn: HTMLButtonElement | null = null;
 let mirrorOppBtn: HTMLButtonElement | null = null;
 let readoutEl: HTMLElement | null = null;
+let srcBadgeEl: HTMLElement | null = null;
+let srcStatusEl: HTMLElement | null = null;
 
 export function mountCellsPanel(host: HTMLElement): void {
   host.innerHTML = `
@@ -292,6 +294,8 @@ export function mountCellsPanel(host: HTMLElement): void {
       <button id="mode-free" data-mode="free">Free</button>
       <button id="mode-3x3" data-mode="3x3">3×3</button>
       <button id="mode-5x5" data-mode="5x5lines">5×5 lines</button>
+      <span id="src-badge" class="src-badge" hidden title="This packed border was reopened from its original source art via Editor metadata. Re-packing will regenerate the sheet.">packed — editing source</span>
+      <span id="src-status" class="src-status" style="margin-left:8px"></span>
       <span id="readout" style="margin-left:auto;font-family:monospace"></span>
     </div>
     <div class="cells-row" style="display:flex;gap:8px;align-items:stretch">
@@ -327,6 +331,9 @@ export function mountCellsPanel(host: HTMLElement): void {
   mirrorOppBtn = host.querySelector<HTMLButtonElement>('#mirror-opp')!;
   mirrorOppBtn.onclick = () => mirrorFromOpposite();
   readoutEl = host.querySelector<HTMLElement>('#readout')!;
+  srcBadgeEl = host.querySelector<HTMLElement>('#src-badge')!;
+  srcStatusEl = host.querySelector<HTMLElement>('#src-status')!;
+  syncSourceIndicators();
 
   // Fresh mount (border/layer/linked switch). resetGridMode cleared lines in selectBorder; ensure
   // the local mode is valid for the new cells: if the previous mode is no longer available, fall
@@ -462,9 +469,17 @@ function refreshModeBar(): void {
 // Cheap in-place refresh: resize canvas if image dims changed, sync toolbar control states
 // without rebuilding the DOM, re-seed line modes from the (possibly updated) cells unless a drag
 // is in progress, refresh the mode bar, then redraw.
+// Show the "packed — editing source" badge when layers were rebuilt from Editor metadata, and
+// surface the saveStatus toast (e.g. a source-load-failure warning) into the cells toolbar.
+function syncSourceIndicators(): void {
+  if (srcBadgeEl) srcBadgeEl.hidden = !state.editingSource;
+  if (srcStatusEl) srcStatusEl.innerHTML = state.saveStatus ?? '';
+}
+
 export function updateCellsPanel(): void {
   if (!canvas) return;
   sizeCanvasToHost();
+  syncSourceIndicators();
 
   if (linkedInput) linkedInput.checked = state.linked;
   const selCell = state.selectedCell && state.layers?.[state.activeLayer]?.cells?.[state.selectedCell[0]]?.[state.selectedCell[1]];

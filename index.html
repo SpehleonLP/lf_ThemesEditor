@@ -48,6 +48,10 @@
       border-radius: 4px; padding: 4px 6px; cursor: pointer; font: 12px 'JetBrains Mono', monospace; }
     .sl-add-select:disabled { opacity: .5; cursor: default; }
     .bs-cells { grid-column: 2; grid-row: 1; }
+    .src-badge { font: 11px 'JetBrains Mono', monospace; color: #cbb8ff; background: rgba(140,120,220,.16);
+      border: 1px solid #46a; border-radius: 8px; padding: 1px 8px; flex: none; }
+    .src-badge[hidden] { display: none; }
+    .src-status { font: 11px 'JetBrains Mono', monospace; }
     .bs-preview { grid-column: 3; grid-row: 1; border-left: 1px solid #2a2a33; }
     /* Preview stage: GL border canvas with a transparent 2D guide overlay stacked exactly atop it.
        The GL canvas is absolutely positioned/sized through the shared view; the overlay covers the

@@ -20,6 +20,7 @@ export interface AppState {
   selectedCell: [number, number] | null; // [y][x]
   dirty: boolean;
   saveStatus: string | null;          // HTML for #save-status, survives re-render
+  editingSource: boolean;             // true when layers were rebuilt from Editor source meta
 }
 
 type Listener = () => void;
@@ -28,6 +29,7 @@ const listeners: Listener[] = [];
 export const state: AppState = {
   doc: null, selected: null, layers: null,
   activeLayer: 'overlay', linked: false, selectedCell: null, dirty: false, saveStatus: null,
+  editingSource: false,
 };
 
 export function subscribe(fn: Listener): void { listeners.push(fn); }

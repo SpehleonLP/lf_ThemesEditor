@@ -68,10 +68,10 @@ export function applyPackResult(entry: any, r: PackApply): void {
     entry.Mask.Image = r.maskImage;
     entry.Mask.Cells = r.linked ? '#COPY' : serializeCells(r.maskCells);
   }
-  entry.Editor = {
+  setEditorMeta(entry, {
     version: 1,
     source: r.source,
     sourceCells: flat(r.sourceCells),
     pack: r.pack,
-  };
+  });
 }
