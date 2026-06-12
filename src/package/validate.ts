@@ -136,7 +136,35 @@ const fileStateValidator: Validator = (pkg) => {
   return out;
 };
 
-const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, timeFactorValidator];
+// 6. borders-tessellation-units — per-axis the engine decides pt-vs-fraction from one component
+// (X: right>1, Y: top>1; gui_panel.tese:108). Warn when the deciding component is a fraction (<=1)
+// but its paired component is in pixels (>1) — the pair silently becomes a nonsense fraction.
+const bordersTessUnitsValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const root = pkg.files.borders.root;
+  if (pkg.files.borders.loadError || pkg.files.borders.missing || !root) return out;
+  for (const name of Object.keys(root)) {
+    const entry = root[name];
+    const t = entry?.Tessellation;
+    if (!Array.isArray(t) || t.length !== 4) continue;
+    const [left, top, right, bottom] = t as number[];
+    const check = (axis: 'X' | 'Y', deciding: number, pair: number, dName: string, pName: string) => {
+      if (deciding <= 1 && pair > 1) {
+        out.push({
+          severity: 'warning', category: 'borders-tessellation-units',
+          message: `Border "${name}" ${axis} tessellation mixes units: ${dName}=${deciding} is a fraction (decides the axis) but ${pName}=${pair} is in pixels — the pixel value becomes a nonsense fraction.`,
+          file: 'borders', jsonPath: [name, 'Tessellation'],
+          nav: { surface: 'borders', entry: { name } },
+        });
+      }
+    };
+    check('X', right, left, 'right', 'left');
+    check('Y', top, bottom, 'top', 'bottom');
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, timeFactorValidator, bordersTessUnitsValidator];
 
 export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
   return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));

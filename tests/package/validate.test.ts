@@ -1,5 +1,5 @@
 // tests/package/validate.test.ts
-import { expect, test } from 'vitest';
+import { expect, test, describe } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { createSchemaValidators, runValidators, type SchemaTexts } from '../../src/package/validate';
 import { buildRefIndex } from '../../src/package/refIndex';
@@ -77,4 +77,41 @@ test('loadError file is reported once and not schema-checked', async () => {
   expect(b.length).toBe(1);
   expect(b[0].category).toBe('load-error');
   expect(b[0].severity).toBe('error');
+});
+
+describe('borders-tessellation-units', () => {
+  async function issuesFor(tessellation: number[]) {
+    const p = pkg({ borders: fd({ Header_0: { Overlay: { Cells: '#COPY' }, Tessellation: tessellation } }) });
+    const all = await run(p);
+    return all.filter((i) => i.category === 'borders-tessellation-units');
+  }
+
+  test('warns when X mixes: right<=1 (fraction) but left>1 (px)', async () => {
+    const is = await issuesFor([32, 0.5, 0.25, 0.5]);
+    expect(is).toHaveLength(1);
+    expect(is[0].severity).toBe('warning');
+    expect(is[0].message).toMatch(/X/);
+    expect(is[0].message).toContain('32');
+    expect(is[0].message).toContain('0.25');
+  });
+
+  test('warns when Y mixes: top<=1 but bottom>1', async () => {
+    const is = await issuesFor([0.25, 0.25, 0.25, 64]);
+    expect(is).toHaveLength(1);
+    expect(is[0].message).toMatch(/Y/);
+  });
+
+  test('no warning when an axis is consistently pixels', async () => {
+    expect(await issuesFor([32, 64, 32, 64])).toHaveLength(0);
+  });
+
+  test('no warning when an axis is consistently fractions', async () => {
+    expect(await issuesFor([0.1, 0.2, 0.1, 0.2])).toHaveLength(0);
+  });
+
+  test('navigates to the borders surface / the entry', async () => {
+    const is = await issuesFor([32, 0.5, 0.25, 0.5]);
+    expect(is[0].nav?.surface).toBe('borders');
+    expect(is[0].nav?.entry?.name).toBe('Header_0');
+  });
 });
