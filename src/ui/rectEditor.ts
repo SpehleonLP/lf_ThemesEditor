@@ -1,5 +1,6 @@
 import { state, notify, type LayerName } from './state';
 import { ninePatchGrid } from '../cells';
+import { mountCellMap, updateCellMap } from './cellMap';
 import type { EditorCell, Rgba } from '../types';
 
 const HANDLE = 6; // px, screen-space
@@ -184,10 +185,18 @@ export function mountCellsPanel(host: HTMLElement): void {
       <button id="np-cancel">Cancel</button>
       <span id="readout" style="margin-left:auto;font-family:monospace"></span>
     </div>
-    <canvas id="rect-canvas" style="display:block;background:#333"></canvas>`;
+    <div class="cells-row" style="display:flex;gap:8px;align-items:stretch">
+      <div class="cells-canvas-col" style="flex:1;min-width:0">
+        <canvas id="rect-canvas" style="display:block;background:#333"></canvas>
+      </div>
+      <div id="cell-map-host" class="cm-host"></div>
+    </div>`;
   canvas = host.querySelector<HTMLCanvasElement>('#rect-canvas')!;
-  canvas.width = host.clientWidth || 800;
+  const canvasCol = canvas.parentElement as HTMLElement;
+  canvas.width = canvasCol.clientWidth || ((host.clientWidth || 800) - 140);
   canvas.height = (host.clientHeight || 600) - 30;
+
+  mountCellMap(host.querySelector<HTMLElement>('#cell-map-host')!);
 
   host.querySelectorAll<HTMLButtonElement>('button[data-layer]').forEach((b) => {
     b.onclick = () => { ninePatch = null; state.activeLayer = b.dataset.layer as LayerName; notify(); };
@@ -291,6 +300,7 @@ export function updateCellsPanel(): void {
   if (npCancelBtn) npCancelBtn.style.display = inNp ? '' : 'none';
 
   draw(canvas);
+  updateCellMap();
 }
 
 function drawNinePatch(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement | null): void {

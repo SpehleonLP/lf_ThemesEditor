@@ -52,6 +52,9 @@ function drawnQuad(): { w: number; h: number; expansion: Vec4 } {
   return { w, h, expansion };
 }
 
+// Exposes the expansion-expanded drawn-quad size in pt (VIEW state) for the cell-map's band dimming.
+export function previewDrawnSizePt(): { w: number; h: number } { const { w, h } = drawnQuad(); return { w, h }; }
+
 // Auto-fit: choose zoom/pan so the drawn quad fits STAGE with ~10% padding, centered.
 function fitView(): void {
   const { w, h } = drawnQuad();

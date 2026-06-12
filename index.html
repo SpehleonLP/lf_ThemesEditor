@@ -39,6 +39,19 @@
     .pv-chips .pv-chip { font: 11px 'JetBrains Mono', monospace; padding: 2px 8px; border-radius: 10px;
       border: 1px solid #3a3a44; background: #23232b; color: #bbb; cursor: pointer; }
     .pv-chips .pv-chip[aria-pressed="true"] { background: #2d4a63; border-color: #4a7aa0; color: #e6f2ff; }
+    .cm-host { flex: 0 0 132px; padding: 0 4px; }
+    .cm-grid { display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr);
+      gap: 2px; width: 124px; height: 124px; }
+    .cm-tile { display: flex; align-items: center; justify-content: center; padding: 0;
+      font: 11px 'JetBrains Mono', monospace; line-height: 1; letter-spacing: -1px;
+      border: 1px solid #2a2a33; border-radius: 3px; background: #23232b; color: #cfcfcf;
+      cursor: pointer; overflow: hidden; }
+    .cm-tile:hover { border-color: #4a7aa0; }
+    .cm-tile.cm-selected { background: #2d4a63; border-color: #4a7aa0; color: #e6f2ff; }
+    .cm-tile.cm-dimmed { opacity: 0.35; }
+    .cm-tile.cm-disabled { cursor: default; background: #1a1a20; border-color: #23232b; color: #555; }
+    .cm-tile.cm-disabled:hover { border-color: #23232b; }
+    .cm-glyphs { pointer-events: none; }
     .bs-bottom-bar { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 16px; padding: 8px; border-top: 1px solid #2a2a33; overflow: auto; }
     .bs-geometry, .bs-fillmask { min-width: 0; }
     .ro-surface, .as-surface { display: grid; grid-template-columns: 1fr 320px; height: 100%; }
