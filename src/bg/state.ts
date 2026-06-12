@@ -21,7 +21,15 @@ export const bgState: BgState = {
 type Listener = () => void;
 const listeners: Listener[] = [];
 export function bgSubscribe(fn: Listener): void { listeners.push(fn); }
-export function bgNotify(): void { for (const fn of listeners) fn(); }
+// Re-entrancy guard: a notify raised *during* notification (e.g. an update() that calls
+// setPairing) is coalesced into one more pass rather than recursing — prevents stack overflow.
+let notifying = false, pending = false;
+export function bgNotify(): void {
+  if (notifying) { pending = true; return; }
+  notifying = true;
+  try { do { pending = false; for (const fn of listeners) fn(); } while (pending); }
+  finally { notifying = false; }
+}
 
 export function bgStructuralKey(): string {
   return [bgState.tab, bgState.selected[bgState.tab] ?? '', String(bgState.structuralNonce)].join('|');
@@ -37,6 +45,8 @@ export function loadPairing(): void {
   try { bgState.pairing = JSON.parse(localStorage.getItem(PAIR_KEY) || '{}'); } catch { bgState.pairing = {}; }
 }
 export function setPairing(slot: string, light0: string, light1: string): void {
+  const cur = bgState.pairing[slot];
+  if (cur && cur[0] === light0 && cur[1] === light1) return; // unchanged → no write, no notify
   bgState.pairing[slot] = [light0, light1];
   try { localStorage.setItem(PAIR_KEY, JSON.stringify(bgState.pairing)); } catch { /* ignore */ }
   bgNotify();
