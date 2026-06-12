@@ -13,6 +13,8 @@ export interface CellGlyphs {
 }
 
 // rotated: exactly one axis reversed -> the signed-area product is negative.
+//   A BOTH-axes-reversed rect has a POSITIVE product and is deliberately NOT flagged
+//   rotated: it's a 180° flip, not a transpose. Don't "fix" this to abs/!== checks.
 // degenerate: zero width or zero height source rect.
 export function cellGlyphs(cell: EditorCell): CellGlyphs {
   const r = cell.rect;

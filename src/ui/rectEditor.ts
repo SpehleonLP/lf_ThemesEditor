@@ -165,6 +165,15 @@ function dragCut(mode: Extract<DragMode, { kind: 'cut' }>, ix: number, iy: numbe
 // --- Panel: built once via mountCellsPanel, refreshed in place via updateCellsPanel. ---
 
 let canvas: HTMLCanvasElement | null = null;
+// Stable host (toolbar + cells-row) cached at mount: its height does NOT depend on
+// the canvas, unlike `canvas.parentElement` (the flex:1 `.cells-canvas-col`, whose
+// height is DRIVEN by the canvas). Sizing off the column would shrink the canvas on
+// every notify(). Height comes from `cellsPanelHost`; width from the canvas column.
+let cellsPanelHost: HTMLElement | null = null;
+// Toolbar row height subtracted from the panel host to get the canvas height.
+const CELLS_TOOLBAR_H = 30;
+// Map-column width fallback: must track `.cm-host` flex-basis (132) + `.cells-row` gap (8).
+const MAP_COL_W = 140;
 let linkedInput: HTMLInputElement | null = null;
 let mxInput: HTMLInputElement | null = null;
 let myInput: HTMLInputElement | null = null;
@@ -192,9 +201,8 @@ export function mountCellsPanel(host: HTMLElement): void {
       <div id="cell-map-host" class="cm-host"></div>
     </div>`;
   canvas = host.querySelector<HTMLCanvasElement>('#rect-canvas')!;
-  const canvasCol = canvas.parentElement as HTMLElement;
-  canvas.width = canvasCol.clientWidth || ((host.clientWidth || 800) - 140);
-  canvas.height = (host.clientHeight || 600) - 30;
+  cellsPanelHost = host;
+  sizeCanvasToHost();
 
   mountCellMap(host.querySelector<HTMLElement>('#cell-map-host')!);
 
@@ -275,18 +283,24 @@ export function mountCellsPanel(host: HTMLElement): void {
   draw(c);
 }
 
+// Size the canvas off STABLE handles so repeated notifies don't progressively shrink it:
+//   height  <- panel host (toolbar + cells-row), independent of the canvas
+//   width   <- the canvas's own flex column (excludes the map column)
+// Used identically at mount and on every update so first paint and refresh agree.
+function sizeCanvasToHost(): void {
+  if (!canvas) return;
+  const col = canvas.parentElement as HTMLElement | null; // .cells-canvas-col (flex:1)
+  const w = (col?.clientWidth) || ((cellsPanelHost?.clientWidth || 800) - MAP_COL_W);
+  const h = (cellsPanelHost?.clientHeight || 600) - CELLS_TOOLBAR_H;
+  if (canvas.width !== w) canvas.width = w;
+  if (canvas.height !== h) canvas.height = h;
+}
+
 // Cheap in-place refresh: resize canvas if image dims changed, sync toolbar control
 // states without rebuilding the DOM, toggle 9-patch toolbar, then redraw.
 export function updateCellsPanel(): void {
   if (!canvas) return;
-  // Keep canvas sized to host (host may have resized between updates).
-  const host = canvas.parentElement;
-  if (host) {
-    const w = host.clientWidth || 800;
-    const h = (host.clientHeight || 600) - 30;
-    if (canvas.width !== w) canvas.width = w;
-    if (canvas.height !== h) canvas.height = h;
-  }
+  sizeCanvasToHost();
 
   if (linkedInput) linkedInput.checked = state.linked;
   const selCell = state.selectedCell && state.layers?.[state.activeLayer]?.cells?.[state.selectedCell[0]]?.[state.selectedCell[1]];

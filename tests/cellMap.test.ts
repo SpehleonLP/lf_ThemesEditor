@@ -37,6 +37,13 @@ describe('cellGlyphs', () => {
     expect(cellGlyphs(cell([0, 7, 10, 7])).degenerate).toBe(true); // zero height
     expect(cellGlyphs(cell([0, 0, 10, 10])).degenerate).toBe(false);
   });
+
+  it('flags a zero-area AND reversed rect as degenerate but not rotated', () => {
+    // zero width (x0 === x1) with y reversed (y0 > y1): product is 0 (not < 0) -> not rotated.
+    const g = cellGlyphs(cell([5, 10, 5, 0]));
+    expect(g.degenerate).toBe(true);
+    expect(g.rotated).toBe(false);
+  });
 });
 
 describe('collapsedBands', () => {
@@ -67,5 +74,17 @@ describe('collapsedBands', () => {
     const { cols, rows } = collapsedBands(bands);
     expect(cols).toEqual([true, false, true, false, true]);
     expect(rows).toEqual([false, false, false, false, false]);
+  });
+
+  it('marks a row collapsed when two adjacent Y positions are equal (X/Y not transposed)', () => {
+    // Mirror of the cols-only case on the Y axis: rows collapse, cols do not.
+    const bands = {
+      positionsX: [0, 0.2, 0.4, 0.6, 0.8, 1],
+      positionsY: [0, 0, 0.5, 0.5, 1, 1],
+      adjustment: [0, 0, 0, 0] as [number, number, number, number],
+    };
+    const { cols, rows } = collapsedBands(bands);
+    expect(rows).toEqual([true, false, true, false, true]);
+    expect(cols).toEqual([false, false, false, false, false]);
   });
 });
