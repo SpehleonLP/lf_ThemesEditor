@@ -41,7 +41,7 @@ const NS_LABEL: Record<Namespace, string> = {
   'asset:image': 'image', 'asset:sound': 'sound',
 };
 
-type Validator = (pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators) => Issue[];
+export type Validator = (pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators) => Issue[];
 
 // 1. schema — ajv per file, with the unknown-key → notice downgrade.
 const schemaValidator: Validator = (pkg, _index, _assets, schemas) => {
@@ -182,7 +182,28 @@ const bgGradientMarksValidator: Validator = (pkg) => {
   return out;
 };
 
-const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator];
+// borders-overlay-image — an object-form Overlay with no Image has no visible
+// artwork to draw. (An imageless Mask is fine: it reuses the Overlay image — #COPY semantics.)
+export const bordersLayerImageValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const doc = pkg.files.borders;
+  if (doc.loadError || doc.missing || !doc.root) return out;
+  for (const name of Object.keys(doc.root)) {
+    const layer = doc.root[name]?.Overlay;
+    if (layer && typeof layer === 'object' && !Array.isArray(layer)
+        && (typeof layer.Image !== 'string' || layer.Image === '')) {
+      out.push({
+        severity: 'warning', category: 'borders-overlay-image',
+        message: `Border "${name}" Overlay has no Image — there is no artwork to draw.`,
+        file: 'borders', jsonPath: [name, 'Overlay'],
+        nav: { surface: 'borders', entry: { name } },
+      });
+    }
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator, bordersLayerImageValidator];
 
 export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
   return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));
