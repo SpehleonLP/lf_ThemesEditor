@@ -46,11 +46,11 @@ test('shell loads, nav switches surfaces, drawer opens', async ({ page }) => {
   // Borders surface is active by default.
   await expect(page.locator('.borders-surface')).toBeVisible();
 
-  // Switch to Response Curves.
+  // Switch to Response Curves (now the editable 4-panel authoring surface).
   await page.locator('.nav-row[data-surface="responseCurves"]').click();
-  await expect(page.locator('.ro-surface')).toBeVisible();
-  // The Events table lists at least one entry from the live data.
-  await expect(page.locator('.tl-row').first()).toBeVisible();
+  await expect(page.locator('.bg-surface')).toBeVisible();
+  // The rail renders its tab buttons (e.g. Events).
+  await expect(page.locator('.bg-tab', { hasText: 'Events' })).toBeVisible();
 
   // Open the Issues drawer via the toolbar status button.
   await page.locator('.tb-status').click();
