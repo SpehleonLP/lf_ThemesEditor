@@ -17,10 +17,22 @@ import type { SurfaceContext } from './surfaces/registry';
 import type { Issue, Severity } from '../package/validate';
 import type { Rgba } from '../types';
 
-// Decoded thumbnails cached per Rgba identity (mirrors rectEditor's imageCanvasCache). The same
-// Rgba buffer is never reused here (each row loads its own), but identity keying is cheap and safe.
-const thumbCache = new WeakMap<Rgba, HTMLCanvasElement>();
 const THUMB = 32;
+
+// Path-keyed thumbnail cache, LOCAL to the slot list and module-level so it survives the panel
+// remount that a border switch triggers (structuralKey changes -> every panel remounts). Without
+// this, each remount re-ran loadImage for all ~36 borders = 36 disk reads + 36 PSD decodes per
+// click. We deliberately do NOT cache in loadImage itself: Task 5.3 (Editor read-back) needs
+// loadImage to return FRESH decodes after a re-pack rewrites image files. The trade-off here is
+// that a 32px thumbnail may briefly show pre-repack pixels until a full reload — acceptable for a
+// minimap. Stored as a Promise so concurrent rows for the same path share one decode.
+const thumbByPath = new Map<string, Promise<HTMLCanvasElement | null>>();
+
+// Invalidate a cached thumbnail (e.g. after a re-pack rewrites the underlying image). Exported for
+// future callers; not wired anywhere yet.
+export function invalidateThumb(path: string): void {
+  thumbByPath.delete(path);
+}
 
 // The overlay image path as written in JSON, or null if the border has no overlay-object image.
 function overlayImagePath(entry: any): string | null {
@@ -29,10 +41,8 @@ function overlayImagePath(entry: any): string | null {
   return typeof raw.Image === 'string' && raw.Image ? raw.Image : null;
 }
 
-// Render a decoded Rgba into a THUMB×THUMB canvas (contain-fit, nearest), cached by identity.
+// Render a decoded Rgba into a THUMB×THUMB canvas (contain-fit, nearest).
 function thumbFor(image: Rgba): HTMLCanvasElement {
-  const cached = thumbCache.get(image);
-  if (cached) return cached;
   const src = document.createElement('canvas');
   src.width = image.width; src.height = image.height;
   src.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(image.data), image.width, image.height), 0, 0);
@@ -45,12 +55,31 @@ function thumbFor(image: Rgba): HTMLCanvasElement {
   const w = Math.max(1, Math.round(image.width * scale));
   const h = Math.max(1, Math.round(image.height * scale));
   ctx.drawImage(src, Math.floor((THUMB - w) / 2), Math.floor((THUMB - h) / 2), w, h);
-  thumbCache.set(image, c);
   return c;
 }
 
+// A DOM node lives in one place; the cached thumbnail can back many rows (shared sheets) and
+// survives remounts, so each row gets its own copy.
+function cloneCanvas(c: HTMLCanvasElement): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = c.width; out.height = c.height;
+  out.getContext('2d')!.drawImage(c, 0, 0);
+  return out;
+}
+
+// Decode + render a path's thumbnail once, caching the promise so remounts reuse it. Resolves to
+// the canvas, or null on load/decode failure.
+function thumbForPath(path: string): Promise<HTMLCanvasElement | null> {
+  let p = thumbByPath.get(path);
+  if (!p) {
+    p = loadImage(path).then((img) => thumbFor(img)).catch(() => null);
+    thumbByPath.set(path, p);
+  }
+  return p;
+}
+
 function worstBorderSeverity(issues: Issue[], borderName: string): Severity | null {
-  const relevant = issues.filter((i) => i.file === 'borders' && i.nav?.entry?.name === borderName);
+  const relevant = issues.filter((i) => i.nav?.entry?.name === borderName);
   return worstSeverity(relevant, 'borders');
 }
 
@@ -159,16 +188,17 @@ function loadThumb(name: string, thumb: HTMLElement): void {
   const entry = state.doc?.root[name];
   const path = overlayImagePath(entry);
   if (!path) { thumb.classList.add('sl-thumb-empty'); return; }
-  void loadImage(path)
-    .then((img) => {
+  void thumbForPath(path)
+    .then((canvas) => {
+      if (!canvas) { thumb.classList.add('sl-thumb-empty'); return; }
       // Race guard: the row may have been removed (name set changed) since the load started.
       if (!thumb.isConnected) return;
       // Path may have changed under us (unlikely here, but cheap to check).
       if (overlayImagePath(state.doc?.root[name]) !== path) return;
       thumb.classList.remove('sl-thumb-empty');
-      thumb.replaceChildren(thumbFor(img));
-    })
-    .catch(() => { thumb.classList.add('sl-thumb-empty'); });
+      // Clone the cached canvas: the same canvas node can't live in two rows / survive recycling.
+      thumb.replaceChildren(cloneCanvas(canvas));
+    });
 }
 
 function rebuildRows(names: string[]): void {
