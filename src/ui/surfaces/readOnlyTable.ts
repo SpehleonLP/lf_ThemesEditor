@@ -20,11 +20,7 @@ export function resolveEntrySelection(
 }
 
 // Surface config: which namespaces (tables) this file owns, in display order.
-const SURFACE_TABLES: Record<'backgrounds' | 'responseCurves', TableDef[]> = {
-  backgrounds: [
-    { ns: 'bg:texcoords', title: 'TexCoords' },
-    { ns: 'bg:gradients', title: 'Gradients' },
-  ],
+const SURFACE_TABLES: Record<'responseCurves', TableDef[]> = {
   responseCurves: [
     { ns: 'rc:events', title: 'Events' },
     { ns: 'rc:splines1d', title: '1D Splines' },
@@ -34,7 +30,7 @@ const SURFACE_TABLES: Record<'backgrounds' | 'responseCurves', TableDef[]> = {
   ],
 };
 
-export function createReadOnlyTableSurface(key: 'backgrounds' | 'responseCurves', label: string, icon: string): Surface {
+export function createReadOnlyTableSurface(key: 'responseCurves', label: string, icon: string): Surface {
   let listHost!: HTMLElement;
   let inspectorHost!: HTMLElement;
   let ctxRef!: SurfaceContext;

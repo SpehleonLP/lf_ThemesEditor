@@ -6,6 +6,7 @@ import { fetchAssetList, type AssetList } from '../package/assets';
 import { createSchemaValidators, runValidators, type Issue, type SchemaTexts } from '../package/validate';
 import { createShell } from './shell';
 import { createBordersSurface } from './surfaces/borders';
+import { createBackgroundsSurface } from './bg/surface';
 import { createReadOnlyTableSurface } from './surfaces/readOnlyTable';
 import { createCodingThemesSurface } from './surfaces/codingThemes';
 import { createAssetsSurface } from './surfaces/assets';
@@ -47,7 +48,7 @@ async function boot(): Promise<void> {
 
   const surfaces: Surface[] = [
     createBordersSurface(pkg.files.borders, scheduleRevalidate),
-    createReadOnlyTableSurface('backgrounds', 'Backgrounds', '◧'),
+    createBackgroundsSurface(pkg.files.backgrounds, scheduleRevalidate),
     createReadOnlyTableSurface('responseCurves', 'Response Curves', '◠'),
     createCodingThemesSurface(pkg.files.codingThemes, scheduleRevalidate),
     createAssetsSurface(),
