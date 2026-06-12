@@ -44,10 +44,17 @@ describe('buildSourceLayers', () => {
     expect(built!.overlay.cells).toBe(es.sourceCells);
     expect(built!.overlay.cells![1][1].rect).toEqual(grid[1][1].rect);
 
-    // mask: distinct source, distinct image; non-linked → shares the same sourceCells reference.
+    // mask: distinct source, distinct image; cells are an INDEPENDENT clone (never aliased), so
+    // in-place edits on one layer can't corrupt the other in non-linked Free mode.
     expect(built!.mask.imagePath).toBe('SourceArt/m.psd');
     expect(built!.mask.image).toEqual(fakeImage(48, 24));
-    expect(built!.mask.cells).toBe(es.sourceCells);
+    expect(built!.mask.cells).not.toBe(es.sourceCells);          // cloned, not aliased
+    expect(built!.mask.cells![1][1].rect).toEqual(grid[1][1].rect); // equal value
+    // Mutating an overlay cell must NOT bleed into the mask (no shared EditorCell objects).
+    const maskBefore = built!.mask.cells![1][1].rect[0];
+    built!.overlay.cells![1][1].rect[0] += 999;
+    expect(built!.mask.cells![1][1].rect[0]).toBe(maskBefore);
+    expect(built!.mask.cells![1][1].rect[0]).not.toBe(built!.overlay.cells![1][1].rect[0]);
     expect(load).toHaveBeenCalledWith('SourceArt/o.psd');
     expect(load).toHaveBeenCalledWith('SourceArt/m.psd');
   });
@@ -74,6 +81,11 @@ describe('buildSourceLayers', () => {
     expect(built!.mask.imagePath).toBe('SourceArt/o.psd');
     expect(built!.mask.image).toBe(built!.overlay.image);        // shares overlay image
     expect(built!.mask.cells).not.toBe(es.sourceCells);          // cloned, not aliased
+    // Mutating an overlay cell must NOT bleed into the mirrored mask (no shared EditorCell objects).
+    const maskBefore = built!.mask.cells![1][1].rect[0];
+    built!.overlay.cells![1][1].rect[0] += 999;
+    expect(built!.mask.cells![1][1].rect[0]).toBe(maskBefore);
+    expect(built!.mask.cells![1][1].rect[0]).not.toBe(built!.overlay.cells![1][1].rect[0]);
     expect(load).toHaveBeenCalledTimes(1);                       // only the overlay loaded
   });
 

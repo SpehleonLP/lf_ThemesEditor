@@ -47,8 +47,13 @@ export async function buildSourceLayers(
   load: (path: string) => Promise<Rgba>,
 ): Promise<{ mask: LayerState; overlay: LayerState } | null> {
   try {
-    const overlayImage = es.source.overlay ? await load(es.source.overlay) : null;
-    const maskImage = es.source.mask ? await load(es.source.mask) : null;
+    // Load both source images concurrently (parity with the packed path). Any required load that
+    // rejects propagates out of Promise.all → caught below → return null. An absent mask source
+    // resolves to null without a load, so it never triggers a spurious failure.
+    const [overlayImage, maskImage] = await Promise.all([
+      es.source.overlay ? load(es.source.overlay) : Promise.resolve(null),
+      es.source.mask ? load(es.source.mask) : Promise.resolve(null),
+    ]);
 
     const oFills = fillsFor(entry, 'Overlay');
     const overlay: LayerState = {
@@ -64,8 +69,10 @@ export async function buildSourceLayers(
       ? {
           imagePath: es.source.mask,
           image: maskImage,
-          // linked layouts share one source layout → clone so edits don't alias overlay's grid.
-          cells: es.source.linked ? structuredClone(es.sourceCells) : es.sourceCells,
+          // ALWAYS clone: the overlay holds the sole reference to es.sourceCells. Aliasing here
+          // would let in-place cell mutations (rectEditor applyDrag / mirrorFromOpposite) on one
+          // layer silently corrupt the other — reachable in non-linked Free mode.
+          cells: structuredClone(es.sourceCells),
           edgeFill: mFills.edgeFill,
           centerFill: mFills.centerFill,
         }
@@ -101,6 +108,7 @@ export async function selectBorder(name: string): Promise<void> {
       state.layers = built;
       state.selectedCell = null;
       state.editingSource = true;
+      state.linked = !!es.source.linked; // reopen with the linked checkbox/edit-targeting as authored
       state.saveStatus = null; // reopening from source is not an edit → no dirty
       notify();
       return;

@@ -15,7 +15,7 @@ export function unflattenCells(flat: readonly EditorCell[]): CellGrid {
   return grid;
 }
 
-export interface EditorSource { source: any; pack: any; sourceCells: CellGrid }
+export interface EditorSource { source: { overlay?: string; mask?: string; linked?: boolean }; pack: any; sourceCells: CellGrid }
 
 // Read packed-border source state back from Editor metadata; null if absent/invalid.
 export function editorSourceCells(entry: any): EditorSource | null {
