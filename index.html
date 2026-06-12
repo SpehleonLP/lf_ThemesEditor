@@ -152,6 +152,44 @@
     .ct-lnum { width: 34px; text-align: right; padding-right: 10px; flex: none; color: var(--ct-LineNumber); opacity: .8; user-select: none; }
     .ct-text { color: var(--ct-Text); white-space: pre; }
     .ct-err { text-decoration: wavy underline var(--ct-Warnings); text-underline-offset: 3px; }
+    /* Response Curves surface */
+    .bg-surface { display: grid; grid-template-columns: 64px 220px 1fr 1fr; height: 100%; }
+    .bg-surface > * { overflow: auto; min-width: 0; }
+    .bg-rail { display: flex; flex-direction: column; gap: 4px; padding: 6px 4px; border-right: 1px solid #2a2a33; }
+    .bg-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; background: #1a1a22; border: 1px solid #33333d; border-radius: 4px; color: #ccc; padding: 6px 2px; cursor: pointer; font-size: 11px; }
+    .bg-tab-active { background: rgba(140,120,220,.22); color: #fff; }
+    .bg-tab-count { font: 10px 'JetBrains Mono', monospace; opacity: .6; }
+    .bg-list { border-right: 1px solid #2a2a33; }
+    .bg-entrylist { display: flex; flex-direction: column; }
+    .bg-el-head { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid #23232b; }
+    .bg-el-count { opacity: .6; font: 11px 'JetBrains Mono', monospace; flex: 1; }
+    .bg-el-add { background: #1a1a22; border: 1px solid #33333d; color: #ccc; border-radius: 4px; cursor: pointer; }
+    .bg-el-row { display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer; }
+    .bg-el-active { background: rgba(140,120,220,.14); }
+    .bg-el-name { flex: 1; font: 12px 'JetBrains Mono', monospace; }
+    .bg-el-refs { font: 11px 'JetBrains Mono', monospace; color: #8c78dc; }
+    .bg-el-dead { font-size: 10px; border: 1px dashed #555; border-radius: 3px; padding: 0 4px; opacity: .6; }
+    .bg-el-del { background: none; border: none; color: #888; cursor: pointer; }
+    .bg-preview, .bg-editor { padding: 10px; }
+    .bg-editor { border-left: 1px solid #2a2a33; }
+    .rc-form { display: flex; flex-direction: column; gap: 10px; }
+    .rc-slot { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .rc-slot-name { flex: 1; }
+    .rc-play { background: #1a1a22; border: 1px solid #33333d; color: #cbb8ff; border-radius: 4px; cursor: pointer; }
+    .rc-comment input, .rc-slot select, .rc-slot input[type="number"], .rc-mark-row input { background: #23232b; color: #cfcfcf; border: 1px solid #2a2a33; border-radius: 3px; }
+    .rc-plot-canvas { border: 1px solid #2a2a33; border-radius: 4px; }
+    .rc-plot-marks { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .rc-mark-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .rc-mark-active { background: rgba(140,120,220,.12); border-radius: 3px; }
+    .rc-mark-del { background: none; border: none; color: #888; cursor: pointer; }
+    .rc-pv-canvas { border: 1px solid #2a2a33; border-radius: 4px; background: #0e0e13; }
+    .rc-transport { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .rc-transport button { background: #1a1a22; border: 1px solid #33333d; color: #ccc; border-radius: 4px; cursor: pointer; padding: 2px 10px; }
+    .bg-grad-bar { border: 1px solid #2a2a33; border-radius: 4px; cursor: pointer; }
+    .bg-grad-stop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; font-size: 12px; }
+    .bg-refby { margin-top: 10px; }
+    .bg-refby-head { font-size: 11px; opacity: .7; margin-bottom: 4px; }
+    .bg-refby-row { font: 11px 'JetBrains Mono', monospace; opacity: .8; }
   </style>
 </head>
 <body>
