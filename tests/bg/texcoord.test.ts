@@ -44,9 +44,9 @@ describe('getTexCoords', () => {
     expect(y).toBeCloseTo(0.5, 6);
   });
   it('negative normalization adds aspect compensation to the scale', () => {
-    // norm=-1 → blend=clamp(-1,0,1)=0 (uses point uv), ratio = aspect = size/min(size)
-    // panel 100x50 → aspect (2,1); scaleFactor default [1,1] → s=(2,1); uv (1,1) → (2,1)
-    const [x, y] = getTexCoords([1, 1], [0, 0], { normalization: -1 }, [100, 50], 0);
+    // Engine: norm=-1 → abs→1 → blend uses quad-space pos AND ratio = aspect = size/min(size).
+    // panel 100x50 → aspect (2,1); scaleFactor default [1,1] → s=(2,1); quad uv (1,1) → (2,1).
+    const [x, y] = getTexCoords([0, 0], [1, 1], { normalization: -1 }, [100, 50], 0);
     expect(x).toBeCloseTo(2, 6);
     expect(y).toBeCloseTo(1, 6);
   });

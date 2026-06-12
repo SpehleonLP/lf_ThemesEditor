@@ -53,13 +53,15 @@ export function getTexCoords(
   panelSize: [number, number],
   nowSeconds: number,
 ): [number, number] {
+  // Engine-faithful (gui_panelbuilder.comp:140-153): norm = abs(norm) FIRST, then the abs'd
+  // value drives BOTH the aspect ratio and the point↔quad blend clamp.
   let norm = num(e.normalization, 0);
   let ratio: [number, number] = [1, 1];
   if (norm < 0) {
-    const absNorm = Math.abs(norm);
+    norm = Math.abs(norm);
     const minSide = Math.max(Math.min(panelSize[0], panelSize[1]), 1);
     const aspect: [number, number] = [panelSize[0] / minSide, panelSize[1] / minSide];
-    ratio = [1 + (aspect[0] - 1) * absNorm, 1 + (aspect[1] - 1) * absNorm];
+    ratio = [1 + (aspect[0] - 1) * norm, 1 + (aspect[1] - 1) * norm];
   }
   const b = Math.max(0, Math.min(1, norm));
   // Use GLSL mix formula (a*(1-t)+b*t) for exact results at t=0 and t=1

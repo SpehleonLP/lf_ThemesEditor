@@ -403,9 +403,9 @@ describe('getTexCoords', () => {
     expect(y).toBeCloseTo(0.5, 6);
   });
   it('negative normalization adds aspect compensation to the scale', () => {
-    // norm=-1 → blend=clamp(-1,0,1)=0 (uses point uv), ratio = aspect = size/min(size)
-    // panel 100x50 → aspect (2,1); scaleFactor default [1,1] → s=(2,1); uv (1,1) → (2,1)
-    const [x, y] = getTexCoords([1, 1], [0, 0], { normalization: -1 }, [100, 50], 0);
+    // Engine (comp:140-153): norm=-1 → abs→1 → blend uses quad-space pos AND ratio = aspect.
+    // panel 100x50 → aspect (2,1); scaleFactor default [1,1] → s=(2,1); quad uv (1,1) → (2,1)
+    const [x, y] = getTexCoords([0, 0], [1, 1], { normalization: -1 }, [100, 50], 0);
     expect(x).toBeCloseTo(2, 6);
     expect(y).toBeCloseTo(1, 6);
   });
@@ -484,9 +484,10 @@ export function getTexCoords(
     ratio = [1 + (aspect[0] - 1) * norm, 1 + (aspect[1] - 1) * norm];
   }
   const b = Math.max(0, Math.min(1, norm));
+  // GLSL mix (a*(1-t)+b*t) — exact at t=0 and t=1 (avoids float drift on toEqual cases).
   const uv: [number, number] = [
-    pointUV[0] + (quadPos[0] - pointUV[0]) * b,
-    pointUV[1] + (quadPos[1] - pointUV[1]) * b,
+    pointUV[0] * (1 - b) + quadPos[0] * b,
+    pointUV[1] * (1 - b) + quadPos[1] * b,
   ];
   return applyMat3(texCoordMat3(e, nowSeconds, ratio), uv);
 }
