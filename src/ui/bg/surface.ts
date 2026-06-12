@@ -5,6 +5,7 @@ import type { FileDoc } from '../../package/model';
 import { resolveEntrySelection } from '../surfaces/readOnlyTable';
 import { bgState, bgSubscribe, bgNotify, bgStructuralKey, selectTab, selectEntry, loadPairing, type BgTab } from '../../bg/state';
 import { buildEntryRows, renderEntryList } from './entryList';
+import { renameNamedEntry } from '../../bg/rename';
 import { mountBackdropForm, updateBackdropForm } from './backdropForm';
 import { mountLightForm, updateLightForm } from './lightForm';
 import { mountTexCoordForm, updateTexCoordForm } from './texCoordForm';
@@ -48,6 +49,27 @@ export function createBackgroundsSurface(bgFile: FileDoc, onDirty: () => void): 
     markDirty();
   }
 
+  function deleteEntry(tab: BgTab, name: string): void {
+    const table = bgFile.root[TAB_TABLE[tab]]; if (!table) return;
+    const ns = tab === 'texcoords' ? 'bg:texcoords' : tab === 'gradients' ? 'bg:gradients' : null;
+    const consumers = ns ? lastCtx!.index.consumers(ns, name).length : 0;
+    if (!confirm(`Delete "${name}"?${consumers ? ` ${consumers} reference(s) will dangle (build error, but visible).` : ''}`)) return;
+    delete table[name];
+    if (bgState.selected[tab] === name) selectEntry(tab, null);
+    markDirty();
+  }
+
+  function renameEntry(tab: BgTab, name: string): void {
+    if (tab !== 'texcoords' && tab !== 'gradients') return;
+    const next = prompt(`Rename "${name}" to:`, name); if (!next || next === name) return;
+    const table = bgFile.root[TAB_TABLE[tab]];
+    if (next in (table ?? {})) { alert('Name already exists.'); return; }
+    const ns = tab === 'texcoords' ? 'bg:texcoords' : 'bg:gradients';
+    renameNamedEntry(lastCtx!.pkg, lastCtx!.index, ns, name, next);
+    selectEntry(tab, next);
+    markDirty();
+  }
+
   function renderRail(): void {
     railHost.replaceChildren();
     const counts = lastCtx ? lastCtx.index : null;
@@ -72,6 +94,8 @@ export function createBackgroundsSurface(bgFile: FileDoc, onDirty: () => void): 
       tab: bgState.tab, rows, selected: bgState.selected[bgState.tab],
       onSelect: (name) => selectEntry(bgState.tab, name),
       onAdd: addEntry,
+      onDelete: (name) => deleteEntry(bgState.tab, name),
+      onRename: bgState.tab === 'texcoords' || bgState.tab === 'gradients' ? (name) => renameEntry(bgState.tab, name) : undefined,
     });
   }
 

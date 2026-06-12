@@ -38,6 +38,8 @@ export interface EntryListOpts {
   swatch?: (name: string) => HTMLElement | null;
   onSelect: (name: string) => void;
   onAdd: () => void;
+  onDelete?: (name: string) => void;
+  onRename?: (name: string) => void;
 }
 
 export function renderEntryList(host: HTMLElement, opts: EntryListOpts): void {
@@ -57,8 +59,10 @@ export function renderEntryList(host: HTMLElement, opts: EntryListOpts): void {
     if (row.severity) { const dot = document.createElement('span'); dot.className = `bg-el-dot bg-el-${row.severity}`; el.appendChild(dot); }
     const sw = opts.swatch?.(row.name); if (sw) { sw.classList.add('bg-el-swatch'); el.appendChild(sw); }
     const nm = document.createElement('span'); nm.className = 'bg-el-name'; nm.textContent = row.name; el.appendChild(nm);
+    if (opts.onRename) nm.addEventListener('dblclick', (e) => { e.stopPropagation(); opts.onRename!(row.name); });
     if (row.dead) { const p = document.createElement('span'); p.className = 'bg-el-dead'; p.textContent = 'dead'; el.appendChild(p); }
     else if (row.refCount != null) { const b = document.createElement('span'); b.className = 'bg-el-refs'; b.textContent = `↗${row.refCount}`; el.appendChild(b); }
+    if (opts.onDelete) { const x = document.createElement('button'); x.className = 'bg-el-del'; x.textContent = '✕'; x.title = 'Delete'; x.addEventListener('click', (e) => { e.stopPropagation(); opts.onDelete!(row.name); }); el.appendChild(x); }
     el.addEventListener('click', () => opts.onSelect(row.name));
     host.appendChild(el);
   }
