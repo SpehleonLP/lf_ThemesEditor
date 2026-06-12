@@ -1,15 +1,22 @@
 import { PreviewRenderer, type PreviewInput, type PreviewLayer } from '../preview/renderer';
-import { state, type LayerName } from './state';
-import type { Vec4 } from '../types';
+import { state, notify, type LayerName } from './state';
+import type { Vec2, Vec4 } from '../types';
 import { readMaskMode } from '../maskMode';
-import { expandedSize, layoutRectFraction } from '../preview/geometry';
-import { drawOverlay, screenToWorld, type OverlayModel, type OverlayView } from './previewOverlay';
+import { expandedSize, layoutRectFraction, tessPtToFraction, tessFractionToPt } from '../preview/geometry';
+import { computeBands } from '../bands';
+import {
+  drawOverlay, hitOverlay, screenToWorld, worldToScreen,
+  type Handle, type OverlayModel, type OverlayView,
+} from './previewOverlay';
 
 // Module-level preview state — these are VIEW state, not document state.
 // Changing them calls updatePreview() only; they never touch notify() or state.dirty.
 let renderer: PreviewRenderer | null = null;
 let panel: [number, number] = [240, 160];
 let showOverlayRegion = false;
+
+// Which box-model overlays are drawn + interactive. VIEW-only: toggling redraws, never dirties.
+const toggles = { expansion: true, cuts: false, centerTile: false, boxModel: false };
 
 // Backing-pixel size of the overlay/GL container (the fixed paint surface we fit into).
 const STAGE_W = 512;
@@ -97,6 +104,12 @@ export function mountPreview(host: HTMLElement): void {
       <label>h <input id="pv-h" type="number" value="${panel[1]}" style="width:60px"></label>
       <label><input id="pv-og" type="checkbox" ${showOverlayRegion ? 'checked' : ''}> show G-region</label>
     </div>
+    <div class="pv-chips" style="padding:6px 8px;display:flex;gap:6px;flex-wrap:wrap">
+      <button type="button" class="pv-chip" data-toggle="expansion" aria-pressed="${toggles.expansion}">Chrome</button>
+      <button type="button" class="pv-chip" data-toggle="cuts" aria-pressed="${toggles.cuts}">Cuts</button>
+      <button type="button" class="pv-chip" data-toggle="centerTile" aria-pressed="${toggles.centerTile}">CenterTile</button>
+      <button type="button" class="pv-chip" data-toggle="boxModel" aria-pressed="${toggles.boxModel}">Box model</button>
+    </div>
     <div class="pv-stage" style="width:${STAGE_W}px;height:${STAGE_H}px;margin:8px;background:repeating-conic-gradient(#555 0% 25%, #777 0% 50%) 0 0 / 16px 16px">
       <canvas id="preview-canvas" class="pv-gl" width="512" height="384"></canvas>
       <canvas class="pv-overlay" width="${STAGE_W}" height="${STAGE_H}"></canvas>
@@ -121,7 +134,18 @@ export function mountPreview(host: HTMLElement): void {
   };
   ['#pv-w', '#pv-h', '#pv-og'].forEach((s) => { (host.querySelector(s) as HTMLInputElement).onchange = rerun; });
 
+  // Toggle chips: flip a VIEW-only boolean + redraw overlay. Never notify() / state.dirty.
+  host.querySelectorAll<HTMLButtonElement>('.pv-chip').forEach((b) => {
+    b.onclick = () => {
+      const k = b.dataset.toggle as keyof typeof toggles;
+      toggles[k] = !toggles[k];
+      b.setAttribute('aria-pressed', String(toggles[k]));
+      redrawOverlay();
+    };
+  });
+
   wireGestures(stage);
+  wireOverlayDrag();
 
   // Auto-fit on (re)mount before the first draw. Closes the deferred "view fit" debt.
   fitView();
@@ -170,17 +194,212 @@ function wireGestures(stage: HTMLElement): void {
   stage.addEventListener('pointercancel', endPan);
 }
 
+// ── Overlay edge dragging ──────────────────────────────────────────────────────
+// Mid-drag we mutate a local working copy (`dragModel`) of the affected entry fields and
+// updatePreview() (view-only). On pointer-up we copy the working values onto the entry, set
+// state.dirty + notify() ONCE — matching the cells-panel pattern. dragModel === null means no drag.
+type DragModel = { Expansion?: Vec4; Tessellation?: Vec4; CenterTile?: Vec4; Margin?: Vec4; Padding?: Vec4 };
+let dragModel: DragModel | null = null;
+let dragHandle: Handle | null = null;
+
+// Map a screen point to world pt under the current view.
+function screenPt(e: PointerEvent): { x: number; y: number } {
+  const rect = overlayCanvas!.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function wireOverlayDrag(): void {
+  const cv = overlayCanvas;
+  if (!cv) return;
+
+  cv.addEventListener('pointerdown', (e: PointerEvent) => {
+    if (e.button !== 0 || e.shiftKey) return; // shift/middle = pan (handled by stage) → let it through
+    const entry = state.doc && state.selected ? state.doc.root[state.selected] : null;
+    if (!entry) return;
+    const model = buildOverlayModel();
+    if (!model) return;
+    const s = screenPt(e);
+    const handle = hitOverlay(view, model, toggles, s.x, s.y);
+    if (!handle) return; // plain miss → don't capture, let pan/zoom on the stage handle it
+    e.preventDefault();
+    e.stopPropagation();
+    dragHandle = handle;
+    dragModel = seedDragModel(entry, handle);
+    cv.setPointerCapture(e.pointerId);
+  });
+
+  cv.addEventListener('pointermove', (e: PointerEvent) => {
+    if (!dragModel || !dragHandle) return;
+    const s = screenPt(e);
+    const wpt = screenToWorld(view, s.x, s.y);
+    applyDrag(dragHandle, dragModel, wpt.x, wpt.y);
+    updatePreview(); // view-only; commit on pointer-up
+  });
+
+  const end = (e: PointerEvent) => {
+    if (!dragModel) return;
+    const m = dragModel;
+    dragModel = null; dragHandle = null;
+    if (cv.hasPointerCapture(e.pointerId)) cv.releasePointerCapture(e.pointerId);
+    const entry = state.doc && state.selected ? state.doc.root[state.selected] : null;
+    if (!entry) return;
+    // Commit the working copy onto the entry once.
+    if (m.Expansion) entry.Expansion = m.Expansion;
+    if (m.Tessellation) entry.Tessellation = m.Tessellation;
+    if (m.CenterTile) entry.CenterTile = m.CenterTile;
+    if (m.Margin || m.Padding) {
+      entry.Style ??= {};
+      if (m.Margin) entry.Style.Margin = m.Margin;
+      if (m.Padding) entry.Style.Padding = m.Padding;
+    }
+    state.dirty = true;
+    notify();
+  };
+  cv.addEventListener('pointerup', end);
+  cv.addEventListener('pointercancel', end);
+}
+
+// Snapshot the entry fields a handle can touch into a fresh working copy.
+function seedDragModel(entry: Record<string, any>, handle: Handle): DragModel {
+  const v4 = (a: any, d: Vec4): Vec4 => (Array.isArray(a) ? [a[0], a[1], a[2], a[3]] : [...d]);
+  switch (handle.kind) {
+    case 'expansion': return { Expansion: v4(entry.Expansion, [0, 0, 0, 0]) };
+    case 'cut':       return { Tessellation: v4(entry.Tessellation, [0, 0, 0, 0]) };
+    case 'centerTile':return { CenterTile: v4(entry.CenterTile, [1, 1, -1, -1]) };
+    case 'margin':    return { Margin: v4(entry.Style?.Margin, [0, 0, 0, 0]) };
+    case 'padding':   return { Padding: v4(entry.Style?.Padding, [0, 0, 0, 0]) };
+  }
+}
+
+// Mutate the working copy from a world-pt drag position. Per-kind geometry below.
+function applyDrag(handle: Handle, m: DragModel, wx: number, wy: number): void {
+  const entry = state.doc && state.selected ? state.doc.root[state.selected] : null;
+  if (!entry) return;
+  const [pw, ph] = panel; // layout-rect (panel) size; expansion grows the quad OUTSIDE this.
+
+  if (handle.kind === 'expansion' && m.Expansion) {
+    // The layout-rect edge sits at world `expansion[side]` from the quad edge. The left edge is at
+    // x = exp.l; dragging it to wx means exp.l = wx (clamped ≥0). Right edge at x = pw + exp.l + ... ,
+    // but easier: with current expansion the quad width = pw + l + r, layout x1 = quad.w - r. So a
+    // right-edge drag to wx → r = quad.w - wx. We recompute quad size from the LIVE working copy.
+    const e = m.Expansion;
+    const qw = pw + e[0] + e[2], qh = ph + e[1] + e[3];
+    if (handle.side === 'l') e[0] = Math.max(0, wx);
+    else if (handle.side === 'r') e[2] = Math.max(0, qw - wx);
+    else if (handle.side === 't') e[1] = Math.max(0, wy);
+    else if (handle.side === 'b') e[3] = Math.max(0, qh - wy);
+    return;
+  }
+
+  if (handle.kind === 'cut' && m.Tessellation) {
+    // Drawn-quad size from the (committed) expansion — expansion isn't being dragged here.
+    const exp = (entry.Expansion ?? [0, 0, 0, 0]) as Vec4;
+    const qw = pw + exp[0] + exp[2], qh = ph + exp[1] + exp[3];
+    const t = m.Tessellation;
+    // §7 per-axis unit rule: X decided by t[2] (right), Y by t[1] (top). ≤1 ⇒ fraction units.
+    if (handle.axis === 'x') {
+      const frac = qw > 0 ? Math.min(0.5, Math.max(0, wx / qw)) : 0;
+      // index 1 = left band edge (distance from left); index 4 = right (distance from right).
+      const distPt = handle.index === 1 ? frac * qw : (1 - frac) * qw;
+      const fractionUnits = (t[2] ?? 0) <= 1;
+      const val = fractionUnits ? tessPtToFraction(distPt, qw) : distPt;
+      if (handle.index === 1) t[0] = clampNonNeg(val);
+      else t[2] = clampNonNeg(val);
+    } else {
+      const frac = qh > 0 ? Math.min(0.5, Math.max(0, wy / qh)) : 0;
+      const distPt = handle.index === 1 ? frac * qh : (1 - frac) * qh;
+      const fractionUnits = (t[1] ?? 0) <= 1;
+      const val = fractionUnits ? tessPtToFraction(distPt, qh) : distPt;
+      if (handle.index === 1) t[1] = clampNonNeg(val);
+      else t[3] = clampNonNeg(val);
+    }
+    return;
+  }
+
+  if (handle.kind === 'centerTile' && m.CenterTile) {
+    const exp = (entry.Expansion ?? [0, 0, 0, 0]) as Vec4;
+    const qw = pw + exp[0] + exp[2], qh = ph + exp[1] + exp[3];
+    const c = m.CenterTile; // pt offsets from drawn-quad center
+    const ox = wx - qw / 2, oy = wy - qh / 2;
+    if (handle.edge === 'x0') c[0] = Math.min(ox, c[2]);
+    else if (handle.edge === 'x1') c[2] = Math.max(ox, c[0]);
+    else if (handle.edge === 'y0') c[1] = Math.min(oy, c[3]);
+    else if (handle.edge === 'y1') c[3] = Math.max(oy, c[1]);
+    return;
+  }
+
+  if ((handle.kind === 'margin' || handle.kind === 'padding')) {
+    const exp = (entry.Expansion ?? [0, 0, 0, 0]) as Vec4;
+    const qw = pw + exp[0] + exp[2], qh = ph + exp[1] + exp[3];
+    // Layout rect in world pt.
+    const lx0 = exp[0], ly0 = exp[1], lx1 = qw - exp[2], ly1 = qh - exp[3];
+    if (handle.kind === 'margin' && m.Margin) {
+      const g = m.Margin; // outside the layout rect
+      if (handle.side === 'l') g[0] = Math.max(0, lx0 - wx);
+      else if (handle.side === 'r') g[2] = Math.max(0, wx - lx1);
+      else if (handle.side === 't') g[1] = Math.max(0, ly0 - wy);
+      else if (handle.side === 'b') g[3] = Math.max(0, wy - ly1);
+    } else if (handle.kind === 'padding' && m.Padding) {
+      const g = m.Padding; // inside the layout rect
+      if (handle.side === 'l') g[0] = Math.max(0, wx - lx0);
+      else if (handle.side === 'r') g[2] = Math.max(0, lx1 - wx);
+      else if (handle.side === 't') g[1] = Math.max(0, wy - ly0);
+      else if (handle.side === 'b') g[3] = Math.max(0, ly1 - wy);
+    }
+  }
+}
+
+function clampNonNeg(n: number): number { return n < 0 ? 0 : n; }
+
+// Build the full OverlayModel from the current entry/view (or, mid-drag, from `dragModel`).
+function buildOverlayModel(): OverlayModel | null {
+  const entry = state.doc && state.selected ? state.doc.root[state.selected] : null;
+  if (!entry) return null;
+  const expansion = (dragModel?.Expansion ?? entry.Expansion ?? [0, 0, 0, 0]) as Vec4;
+  const [w, h] = expandedSize(panel, expansion);
+  const tess = (dragModel?.Tessellation ?? entry.Tessellation ?? [0, 0, 0, 0]) as Vec4;
+  const ct = (dragModel?.CenterTile ?? entry.CenterTile ?? [1, 1, -1, -1]) as Vec4;
+  const style = entry.Style ?? {};
+  const margin = (dragModel?.Margin ?? style.Margin) as Vec4 | undefined;
+  const padding = (dragModel?.Padding ?? style.Padding) as Vec4 | undefined;
+  const minSize = style.MinSize as Vec2 | undefined;
+
+  let bandsX: number[] | undefined, bandsY: number[] | undefined;
+  if (w > 0 && h > 0) {
+    try {
+      const bands = computeBands(tess, ct, [w, h]);
+      bandsX = bands.positionsX; bandsY = bands.positionsY;
+    } catch { /* invalid size — skip cuts */ }
+  }
+
+  return {
+    drawnQuadPt: { w, h },
+    layoutFrac: layoutRectFraction(panel, expansion),
+    bandsX, bandsY,
+    centerTile: { x0: ct[0], y0: ct[1], x1: ct[2], y1: ct[3] },
+    margin: margin ? { l: margin[0], t: margin[1], r: margin[2], b: margin[3] } : undefined,
+    padding: padding ? { l: padding[0], t: padding[1], r: padding[2], b: padding[3] } : undefined,
+    minSize: minSize ? { w: minSize[0], h: minSize[1] } : undefined,
+  };
+}
+
 // Build the OverlayModel from the current entry/view and redraw the 2D guides.
 function redrawOverlay(): void {
   if (!overlayCanvas) return;
   const ctx = overlayCanvas.getContext('2d');
   if (!ctx) return;
-  const { w, h, expansion } = drawnQuad();
-  const model: OverlayModel = {
-    drawnQuadPt: { w, h },
-    layoutFrac: layoutRectFraction(panel, expansion),
-  };
-  drawOverlay(ctx, view, model, { expansion: true });
+  const model = buildOverlayModel();
+  if (!model) { ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); return; }
+  drawOverlay(ctx, view, model, toggles);
+  // Test/inspection hook: publish the layout-rect screen bbox (px within the overlay canvas) so
+  // e2e can target draggable ring edges without re-deriving the view transform.
+  const { w, h } = model.drawnQuadPt;
+  const a = worldToScreen(view, model.layoutFrac.x0 * w, model.layoutFrac.y0 * h);
+  const b = worldToScreen(view, model.layoutFrac.x1 * w, model.layoutFrac.y1 * h);
+  overlayCanvas.dataset.layoutL = String(a.x);
+  overlayCanvas.dataset.layoutT = String(a.y);
+  overlayCanvas.dataset.layoutR = String(b.x);
+  overlayCanvas.dataset.layoutB = String(b.y);
 }
 
 /**

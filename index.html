@@ -33,7 +33,12 @@
        full stage. touch-action:none lets wheel-zoom + pointer-pan gestures work on the stage. */
     .pv-stage { position: relative; touch-action: none; }
     .pv-stage .pv-gl { position: absolute; left: 0; top: 0; }
-    .pv-stage .pv-overlay { position: absolute; inset: 0; pointer-events: none; }
+    /* Overlay accepts pointer events for edge-dragging; misses don't stopPropagation, so
+       wheel-zoom and shift/middle-pan still bubble up to the .pv-stage gesture handlers. */
+    .pv-stage .pv-overlay { position: absolute; inset: 0; pointer-events: auto; touch-action: none; }
+    .pv-chips .pv-chip { font: 11px 'JetBrains Mono', monospace; padding: 2px 8px; border-radius: 10px;
+      border: 1px solid #3a3a44; background: #23232b; color: #bbb; cursor: pointer; }
+    .pv-chips .pv-chip[aria-pressed="true"] { background: #2d4a63; border-color: #4a7aa0; color: #e6f2ff; }
     .bs-bottom-bar { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 16px; padding: 8px; border-top: 1px solid #2a2a33; overflow: auto; }
     .bs-geometry, .bs-fillmask { min-width: 0; }
     .ro-surface, .as-surface { display: grid; grid-template-columns: 1fr 320px; height: 100%; }
