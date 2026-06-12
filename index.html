@@ -28,6 +28,12 @@
     .bs-slots { grid-column: 1; grid-row: 1; border-right: 1px solid #2a2a33; }
     .bs-cells { grid-column: 2; grid-row: 1; }
     .bs-preview { grid-column: 3; grid-row: 1; border-left: 1px solid #2a2a33; }
+    /* Preview stage: GL border canvas with a transparent 2D guide overlay stacked exactly atop it.
+       The GL canvas is absolutely positioned/sized through the shared view; the overlay covers the
+       full stage. touch-action:none lets wheel-zoom + pointer-pan gestures work on the stage. */
+    .pv-stage { position: relative; touch-action: none; }
+    .pv-stage .pv-gl { position: absolute; left: 0; top: 0; }
+    .pv-stage .pv-overlay { position: absolute; inset: 0; pointer-events: none; }
     .bs-bottom-bar { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 16px; padding: 8px; border-top: 1px solid #2a2a33; overflow: auto; }
     .bs-geometry, .bs-fillmask { min-width: 0; }
     .ro-surface, .as-surface { display: grid; grid-template-columns: 1fr 320px; height: 100%; }
