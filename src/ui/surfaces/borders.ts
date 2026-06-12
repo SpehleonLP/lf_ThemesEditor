@@ -67,12 +67,20 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
     // re-mounts every panel; a plain value notify() only updates in place. Then flush layers and
     // sync dirty to the package model so revalidate kicks.
     let lastKey = '';
+    let lastFileDirty = bordersFile.dirty;
     subscribe(() => {
+      // The toolbar Save writes bordersFile and clears bordersFile.dirty directly (it doesn't know
+      // about our working-copy `state`). Detect that external true->false transition and adopt it;
+      // otherwise the one-way sync below immediately re-dirties the just-saved file and Save could
+      // never disable for this surface.
+      if (lastFileDirty && !bordersFile.dirty) state.dirty = false;
+
       const key = structuralKey();
       if (key !== lastKey) { lastKey = key; for (const p of panels) p.mount(p.host); }
       for (const p of panels) p.update();
       flushLayers();
       if (bordersFile.dirty !== state.dirty) { bordersFile.dirty = state.dirty; onDirty(); }
+      lastFileDirty = bordersFile.dirty;
     });
 
     built = true;
