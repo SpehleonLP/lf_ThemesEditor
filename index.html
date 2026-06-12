@@ -23,8 +23,13 @@
     .nav-error { background: #e76461; } .nav-warning { background: #e0a84d; } .nav-notice { background: #888; }
     .host-stack { position: relative; min-width: 0; overflow: auto; }
     .surface-host { height: 100%; }
-    .borders-surface { display: grid; grid-template-columns: 220px 1fr 340px; height: 100%; }
+    .borders-surface { display: grid; grid-template-columns: 230px 1fr 1fr; grid-template-rows: 1fr auto; height: 100%; }
     .borders-surface > * { overflow: auto; min-width: 0; }
+    .bs-slots { grid-column: 1; grid-row: 1; border-right: 1px solid #2a2a33; }
+    .bs-cells { grid-column: 2; grid-row: 1; }
+    .bs-preview { grid-column: 3; grid-row: 1; border-left: 1px solid #2a2a33; }
+    .bs-bottom-bar { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 16px; padding: 8px; border-top: 1px solid #2a2a33; overflow: auto; }
+    .bs-geometry, .bs-fillmask { min-width: 0; }
     .ro-surface, .as-surface { display: grid; grid-template-columns: 1fr 320px; height: 100%; }
     .ro-list, .as-main { overflow: auto; border-right: 1px solid #2a2a33; }
     .ro-inspector { overflow: auto; padding: 10px; }

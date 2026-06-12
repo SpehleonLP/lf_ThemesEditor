@@ -32,3 +32,15 @@ export const state: AppState = {
 
 export function subscribe(fn: Listener): void { listeners.push(fn); }
 export function notify(): void { for (const fn of listeners) fn(); }
+
+// A self-contained panel: built once into `host` via mount(), then refreshed in place via update().
+export interface Panel { host: HTMLElement; mount(host: HTMLElement): void; update(): void }
+
+// Structural identity of the surface: changes exactly when a border switch or a layer
+// add/remove happens (or the linked flag toggles), and stays the same for plain value edits.
+// `layers` is a fixed Record<'mask'|'overlay', ...> | null, so its structure is captured by
+// which layer keys are present (vs the whole object being null).
+export function structuralKey(): string {
+  const layerKeys = state.layers ? Object.keys(state.layers).join(',') : '';
+  return [state.selected, state.activeLayer, layerKeys, state.linked].join('|');
+}
