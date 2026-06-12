@@ -27,8 +27,9 @@ async function boot(): Promise<void> {
 
   let index: RefIndex = buildRefIndex(pkg);
   let assets: AssetList = await fetchAssetList(index.edges(), listDir);
+  let issues: Issue[] = [];
 
-  const getContext = (): SurfaceContext => ({ pkg, index, assets, navigate: (t) => shell.navigate(t) });
+  const getContext = (): SurfaceContext => ({ pkg, index, assets, issues, navigate: (t) => shell.navigate(t) });
 
   let debounce: ReturnType<typeof setTimeout> | null = null;
   function scheduleRevalidate(): void {
@@ -39,7 +40,7 @@ async function boot(): Promise<void> {
   async function runPipeline(refreshAssets: boolean): Promise<void> {
     index = buildRefIndex(pkg);
     if (refreshAssets) assets = await fetchAssetList(index.edges(), listDir);
-    const issues: Issue[] = runValidators(pkg, index, assets, schemas);
+    issues = runValidators(pkg, index, assets, schemas);
     shell.setIssues(issues);
     shell.refreshSurfaces();
   }

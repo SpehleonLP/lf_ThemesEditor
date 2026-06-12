@@ -4,6 +4,7 @@ import { fromEditorGrid, normalizeCells, quantizeUnorm16 } from '../cells';
 import { FILL_VALUE, type FillMode, type Rgba, type Vec4 } from '../types';
 import type { CellGrid } from '../types';
 import { FRAG, VERT } from './shaders';
+import { expandedSize } from './geometry';
 
 export interface PreviewLayer {
   image: Rgba;
@@ -19,6 +20,8 @@ export interface PreviewInput {
   centerTile: Vec4;
   panelSize: [number, number]; // pt; preview treats 1pt = 1px
   showOverlayRegion: boolean;
+  maskMode: 0 | 1 | 2;        // 0 none, 1 texture, 2 overlay
+  expansion: Vec4;             // [l,t,r,b] in pt; drawn quad = panelSize + expansion
 }
 
 function compile(gl: WebGL2RenderingContext, type: number, src: string): WebGLShader {
@@ -51,10 +54,12 @@ function gpuCells(cells: CellGrid, imageSize: [number, number]): { rects: Float3
 export class PreviewRenderer {
   private gl: WebGL2RenderingContext;
   private prog: WebGLProgram;
+  private uloc = new Map<string, WebGLUniformLocation | null>();
   private vao: WebGLVertexArrayObject;
   private bufs: WebGLBuffer[];
   private maskTex: WebGLTexture;
   private overlayTex: WebGLTexture;
+  private texFor: { mask: Rgba | null; overlay: Rgba | null } = { mask: null, overlay: null };
 
   constructor(private canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true });
@@ -72,6 +77,16 @@ export class PreviewRenderer {
       gl.deleteShader(vs);
       gl.deleteShader(fs);
       throw new Error(log);
+    }
+    // Cache all active uniform locations once so per-draw lookups are O(1) map reads.
+    const nU = gl.getProgramParameter(this.prog, gl.ACTIVE_UNIFORMS) as number;
+    for (let i = 0; i < nU; ++i) {
+      const info = gl.getActiveUniform(this.prog, i);
+      if (!info) continue;
+      const base = info.name.replace(/\[0\]$/, '');
+      const baseLoc = gl.getUniformLocation(this.prog, info.name);
+      this.uloc.set(info.name, baseLoc);
+      if (base !== info.name) this.uloc.set(`${base}[0]`, baseLoc);
     }
     // Program keeps its own linked copy; detach + delete the shader objects.
     gl.detachShader(this.prog, vs);
@@ -113,7 +128,8 @@ export class PreviewRenderer {
 
   render(input: PreviewInput): void {
     const gl = this.gl;
-    const bands = computeBands(input.tessellation, input.centerTile, input.panelSize);
+    const drawn = expandedSize(input.panelSize, input.expansion);
+    const bands = computeBands(input.tessellation, input.centerTile, drawn);
     const mesh = buildBandMesh(bands);
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -134,26 +150,54 @@ export class PreviewRenderer {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.bufs[3]);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.DYNAMIC_DRAW);
 
-    const u = (n: string) => gl.getUniformLocation(this.prog, n);
-    const setLayer = (prefix: 'mask' | 'overlay', layer: PreviewLayer | null, tex: WebGLTexture, unit: number) => {
-      gl.uniform1i(u(`u_has${prefix === 'mask' ? 'Mask' : 'Overlay'}`), layer ? 1 : 0);
+    const u = (name: string): WebGLUniformLocation | null => {
+      if (this.uloc.has(name)) return this.uloc.get(name) ?? null;
+      const loc = gl.getUniformLocation(this.prog, name); // tolerate array-element names not enumerated
+      this.uloc.set(name, loc);
+      console.assert(loc !== null, `preview: uniform "${name}" not found after clean link`);
+      return loc;
+    };
+    const setOverlayLayer = (layer: PreviewLayer | null, tex: WebGLTexture, unit: number) => {
+      gl.uniform1i(u('u_hasOverlay'), layer ? 1 : 0);
       if (!layer) return;
-      this.upload(tex, layer.image);
+      if (this.texFor['overlay'] !== layer.image) {
+        this.upload(tex, layer.image);
+        this.texFor['overlay'] = layer.image;
+      }
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.uniform1i(u(`u_${prefix}Tex`), unit);
+      gl.uniform1i(u('u_overlayTex'), unit);
       const { rects, mirror } = gpuCells(layer.cells, [layer.image.width, layer.image.height]);
-      gl.uniform4fv(u(`u_${prefix}Cells[0]`), rects);
-      gl.uniform1iv(u(`u_${prefix}Mirror[0]`), mirror);
-      gl.uniform4i(u(`u_${prefix}Fill`),
+      gl.uniform4fv(u('u_overlayCells[0]'), rects);
+      gl.uniform1iv(u('u_overlayMirror[0]'), mirror);
+      gl.uniform4i(u('u_overlayFill'),
         FILL_VALUE[layer.edgeFill[0]], FILL_VALUE[layer.edgeFill[1]],
         FILL_VALUE[layer.centerFill[0]], FILL_VALUE[layer.centerFill[1]]);
-      gl.uniform2f(u(`u_${prefix}TexSize`), layer.image.width, layer.image.height);
+      gl.uniform2f(u('u_overlayTexSize'), layer.image.width, layer.image.height);
     };
-    setLayer('mask', input.mask, this.maskTex, 0);
-    setLayer('overlay', input.overlay, this.overlayTex, 1);
 
-    gl.uniform2f(u('u_panelSize'), input.panelSize[0], input.panelSize[1]);
+    // maskMode: 0=none, 1=texture (upload mask layer), 2=overlay (mask=(0,1), no texture needed)
+    gl.uniform1i(u('u_maskMode'), input.maskMode);
+    if (input.maskMode === 1 && input.mask) {
+      const layer = input.mask;
+      if (this.texFor['mask'] !== layer.image) {
+        this.upload(this.maskTex, layer.image);
+        this.texFor['mask'] = layer.image;
+      }
+      gl.activeTexture(gl.TEXTURE0 + 0);
+      gl.bindTexture(gl.TEXTURE_2D, this.maskTex);
+      gl.uniform1i(u('u_maskTex'), 0);
+      const { rects, mirror } = gpuCells(layer.cells, [layer.image.width, layer.image.height]);
+      gl.uniform4fv(u('u_maskCells[0]'), rects);
+      gl.uniform1iv(u('u_maskMirror[0]'), mirror);
+      gl.uniform4i(u('u_maskFill'),
+        FILL_VALUE[layer.edgeFill[0]], FILL_VALUE[layer.edgeFill[1]],
+        FILL_VALUE[layer.centerFill[0]], FILL_VALUE[layer.centerFill[1]]);
+      gl.uniform2f(u('u_maskTexSize'), layer.image.width, layer.image.height);
+    }
+    setOverlayLayer(input.overlay, this.overlayTex, 1);
+
+    gl.uniform2f(u('u_panelSize'), drawn[0], drawn[1]);
     gl.uniform4f(u('u_positionsX'), bands.positionsX[1], bands.positionsX[2], bands.positionsX[3], bands.positionsX[4]);
     gl.uniform4f(u('u_positionsY'), bands.positionsY[1], bands.positionsY[2], bands.positionsY[3], bands.positionsY[4]);
     gl.uniform4f(u('u_content'), 0.35, 0.35, 0.4, 0.85);

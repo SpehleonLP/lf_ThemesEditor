@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { background: #0c0c10; color: #e7e7ee; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  ::selection { background: rgba(140,124,246,0.35); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #2a2a34; border-radius: 6px; border: 2px solid #0c0c10; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a46; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  input[type=color] { -webkit-appearance: none; appearance: none; border: none; padding: 0; background: none; cursor: pointer; }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type=color]::-webkit-color-swatch { border: none; border-radius: 4px; }
+  @keyframes annoPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  @keyframes scrubGlow { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+</style>
+</helmet>
+
+<div style="height:100vh;display:flex;flex-direction:column;overflow:hidden;background:#0c0c10">
+
+  <!-- ============ TOP TOOLBAR (package level) ============ -->
+  <header style="height:52px;flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:0 14px;background:linear-gradient(#16161c,#121217);border-bottom:1px solid #2a2a34;z-index:30">
+    <div style="display:flex;align-items:center;gap:9px">
+      <div style="width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#8c7cf6,#6f5cf0);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(140,124,246,.4),0 4px 12px rgba(111,92,240,.35)">
+        <div style="width:11px;height:11px;border:2px solid #fff;border-radius:3px"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;line-height:1.1">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#e7e7ee">fantasy_ui.lf_gui</span>
+          <span title="Unsaved changes" style="width:7px;height:7px;border-radius:50%;background:#e6ad4d;box-shadow:0 0 6px rgba(230,173,77,.7)"></span>
+        </div>
+        <span style="font-size:10px;color:#6b6b7a;letter-spacing:.02em">Gui::PackageBuilder · 4 files · 12 assets</span>
+      </div>
+    </div>
+
+    <div style="width:1px;height:24px;background:#2a2a34"></div>
+
+    <nav style="display:flex;align-items:center;gap:2px;font-size:12px;color:#9b9bab">
+      <span style="padding:4px 8px;border-radius:5px">File</span>
+      <span style="padding:4px 8px;border-radius:5px">Edit</span>
+      <span style="padding:4px 8px;border-radius:5px">View</span>
+    </nav>
+
+    <div style="flex:1"></div>
+
+    <!-- validation status -->
+    <button onClick="{{ toggleIssues }}" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 11px;border-radius:7px;border:1px solid #5a2a2a;background:rgba(231,100,97,.1);color:#e76461;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer">
+      <span style="width:7px;height:7px;border-radius:50%;background:#e76461;box-shadow:0 0 6px rgba(231,100,97,.7)"></span>
+      3 errors
+      <span style="color:#e6ad4d">· 3 warnings</span>
+      <span style="font-size:10px;opacity:.7">▾</span>
+    </button>
+
+    <div style="display:flex;align-items:center;gap:7px">
+      <button style="height:32px;padding:0 13px;border-radius:7px;border:1px solid #2a2a34;background:#1c1c24;color:#cfcfda;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer">Validate</button>
+      <button style="height:32px;padding:0 13px;border-radius:7px;border:1px solid #2a2a34;background:#1c1c24;color:#cfcfda;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer">Save</button>
+      <button style="height:32px;padding:0 15px;border-radius:7px;border:1px solid #6f5cf0;background:linear-gradient(#8c7cf6,#6f5cf0);color:#fff;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(111,92,240,.35);display:flex;align-items:center;gap:7px">
+        <span style="font-size:13px">⬡</span> Build .lf_gui
+      </button>
+    </div>
+  </header>
+
+  <div style="flex:1;display:flex;min-height:0">
+
+    <!-- ============ LEFT NAV ============ -->
+    <aside style="width:212px;flex:0 0 auto;background:#101015;border-right:1px solid #2a2a34;display:flex;flex-direction:column;padding:12px 10px;overflow-y:auto">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#5a5a68;padding:4px 8px 8px">SURFACES</div>
+      <sc-for list="{{ navSurfaces }}" as="item" hint-placeholder-count="4">
+        <button onClick="{{ item.onClick }}" style="{{ item.style }}">
+          <span style="{{ item.iconWrap }}">{{ item.icon }}</span>
+          <span style="flex:1;text-align:left">{{ item.label }}</span>
+          <sc-if value="{{ item.warn }}" hint-placeholder-val="{{ false }}"><span title="Has validation issues" style="width:6px;height:6px;border-radius:50%;background:#e6ad4d"></span></sc-if>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b6b7a;background:#1c1c24;border-radius:4px;padding:1px 5px">{{ item.count }}</span>
+        </button>
+      </sc-for>
+
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#5a5a68;padding:18px 8px 8px">ASSETS</div>
+      <sc-for list="{{ navAssets }}" as="item" hint-placeholder-count="2">
+        <button onClick="{{ item.onClick }}" style="{{ item.style }}">
+          <span style="{{ item.iconWrap }}">{{ item.icon }}</span>
+          <span style="flex:1;text-align:left">{{ item.label }}</span>
+          <sc-if value="{{ item.warn }}" hint-placeholder-val="{{ false }}"><span title="Format / missing-file issue" style="width:6px;height:6px;border-radius:50%;background:#e76461"></span></sc-if>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b6b7a;background:#1c1c24;border-radius:4px;padding:1px 5px">{{ item.count }}</span>
+        </button>
+      </sc-for>
+
+      <div style="flex:1"></div>
+
+      <!-- annotations toggle -->
+      <button onClick="{{ toggleAnno }}" style="{{ annoBtnStyle }}">
+        <span style="display:inline-flex;width:16px;height:16px;border-radius:50%;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:#8c7cf6;color:#fff">i</span>
+        Spec annotations
+        <span style="flex:1"></span>
+        <span style="font-size:10px;opacity:.8">{{ annoState }}</span>
+      </button>
+    </aside>
+
+    <!-- ============ MAIN AREA ============ -->
+    <main style="flex:1;min-width:0;position:relative;display:flex;flex-direction:column;overflow:hidden">
+
+      <!-- BORDERS -->
+      <sc-if value="{{ isBorders }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="Borders" style="flex:1;display:flex;flex-direction:column;min-height:0">
+
+         <!-- ============ TOP ROW: slots | UV editor | preview ============ -->
+         <div style="flex:1;display:flex;min-height:0">
+
+          <!-- PANE A: slot list -->
+          <section style="width:230px;flex:0 0 auto;background:#101015;border-right:1px solid #2a2a34;display:flex;flex-direction:column;min-height:0">
+            <div style="padding:12px 12px 10px;display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:12px;font-weight:700;color:#e7e7ee">Border slots</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b6b7a;background:#1c1c24;border-radius:4px;padding:2px 6px">12</span>
+            </div>
+            <div style="padding:0 12px 10px;position:relative">
+              <button onClick="{{ togglePickerAddSlot }}" style="width:100%;height:30px;border-radius:7px;border:1px dashed #3a3a46;background:#15151b;color:#9b9bab;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+                <span style="color:#8c7cf6;font-size:14px">+</span> Add slot <span style="font-size:10px;color:#6b6b7a">(enum)</span>
+              </button>
+              <sc-if value="{{ addSlotOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;left:12px;right:12px;top:42px;z-index:20;background:#1c1c24;border:1px solid #3a3a46;border-radius:8px;box-shadow:0 12px 28px rgba(0,0,0,.5);padding:6px;max-height:220px;overflow-y:auto">
+                  <div style="font-size:10px;color:#6b6b7a;padding:4px 8px;letter-spacing:.05em">UNUSED Gui::Border SLOTS</div>
+                  <sc-for list="{{ unusedSlots }}" as="slot" hint-placeholder-count="6">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#cfcfda;padding:6px 8px;border-radius:5px;cursor:pointer" style-hover="background:#2a2a34">{{ slot }}</div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+            <div style="padding:0 12px 10px">
+              <div style="border:1px solid #2a2a34;background:#15151b;border-radius:9px;padding:11px 12px;display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#5a5a68">SELECTED · Gui::Border enum</div>
+                <button style="display:flex;align-items:center;gap:8px;width:100%;height:32px;padding:0 11px;border-radius:7px;border:1px solid #3a3358;background:rgba(140,124,246,.1);color:#e7e7ee;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;cursor:pointer"><span style="flex:1;text-align:left">{{ selBorderName }}</span><span style="font-size:10px;color:#8c7cf6">▾</span></button>
+                <div style="display:flex;align-items:center;gap:7px;height:28px;padding:0 9px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13">
+                  <span style="width:17px;height:17px;border-radius:3px;flex:0 0 auto;background:repeating-conic-gradient(#23232c 0% 25%,#1a1a22 0% 50%) 50%/6px 6px;overflow:hidden;display:flex"><img src="images/scroll_window.png" alt="" style="width:100%;height:100%;object-fit:cover"></span>
+                  <span style="flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:10px;color:#cfcfda;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">scroll_window.png</span>
+                </div>
+                <div style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#7a7a8a;background:#0e0e13;border:1px solid #2a2a34;border-radius:6px;padding:3px 7px">used by 1 slot <span style="color:#5a5a68">· not shared</span></div>
+              </div>
+            </div>
+            <div style="height:1px;background:#1c1c24;margin:0 12px 10px"></div>
+            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:#5a5a68;padding:0 14px 8px">SELECTABLE SLOTS</div>
+            <div style="flex:1;overflow-y:auto;padding:0 8px 12px">
+              <sc-for list="{{ borderSlots }}" as="b" hint-placeholder-count="9">
+                <button onClick="{{ b.onClick }}" style="{{ b.rowStyle }}">
+                  <span style="width:24px;height:24px;border-radius:5px;flex:0 0 auto;background:repeating-conic-gradient(#23232c 0% 25%,#1a1a22 0% 50%) 50%/8px 8px;border:1px solid #2a2a34;position:relative;overflow:hidden">
+                    <span style="position:absolute;inset:3px;border:2px solid #5a5a70;border-radius:2px"></span>
+                  </span>
+                  <span style="flex:1;min-width:0;text-align:left;font-family:'JetBrains Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit">{{ b.name }}</span>
+                  <sc-if value="{{ b.shared }}" hint-placeholder-val="{{ false }}"><span title="Shares an image sheet" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8c7cf6;background:rgba(140,124,246,.14);border-radius:4px;padding:1px 4px">⛓{{ b.shareCount }}</span></sc-if>
+                  <sc-if value="{{ b.warn }}" hint-placeholder-val="{{ false }}"><span title="Validation issue" style="width:6px;height:6px;border-radius:50%;background:#e6ad4d;flex:0 0 auto"></span></sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </section>
+
+          <!-- right region: two editor stacks over their own bars + shared overlay/mask -->
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;min-height:0">
+           <div style="flex:1;display:flex;min-height:0">
+
+          <!-- LEFT editor: UV editor + tessellation/expansion/centertile -->
+          <section style="flex:1.12;min-width:0;display:flex;flex-direction:column;background:#0e0e13;border-right:1px solid #2a2a34;min-height:0">
+            <div style="height:42px;flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid #2a2a34;background:#121217;overflow:hidden">
+              <span style="flex:0 0 auto;font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">UV editor</span>
+              <span style="flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">scroll_window · 1024×512</span>
+              <div style="flex:1"></div>
+              <div style="flex:0 0 auto;display:flex;align-items:center;gap:5px">
+                <sc-for list="{{ uvToggles }}" as="t" hint-placeholder-count="4">
+                  <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex:1;position:relative;overflow:hidden;min-height:0">{{ uvEditor }}</div>
+            <!-- UV controls: tessellation | expansion | centertile -->
+            <div style="flex:0 0 auto;height:152px;border-top:1px solid #2a2a34;background:#101015;display:flex;overflow-x:auto;overflow-y:hidden">
+              <div style="flex:1 1 0;min-width:148px;padding:13px 15px;border-right:1px solid #1c1c24;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:2px;background:#a395ff;border-radius:2px"></span><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">TESSELLATION</span></div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#6b6b7a">band widths · pt</div>
+                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+                  <sc-for list="{{ tessVals }}" as="f" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <span style="font-size:9px;color:#5a5a68;text-align:center;font-family:'JetBrains Mono',monospace">{{ f.k }}</span>
+                      <div style="height:28px;border-radius:6px;border:1px solid {{ f.border }};background:#0e0e13;color:#d6d6e0;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center">{{ f.v }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8c7cf6;cursor:pointer">drag cuts on canvas ↑</div>
+              </div>
+              <div style="flex:1 1 0;min-width:148px;padding:13px 15px;border-right:1px solid #1c1c24;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border:1.5px dashed #e6c98a;border-radius:2px"></span><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">EXPANSION</span></div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#6b6b7a">grows drawn quad · pt</div>
+                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+                  <sc-for list="{{ expVals }}" as="f" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <span style="font-size:9px;color:#5a5a68;text-align:center;font-family:'JetBrains Mono',monospace">{{ f.k }}</span>
+                      <div style="height:28px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;color:#d6d6e0;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center">{{ f.v }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#e6c98a;cursor:pointer">drag widget rect on canvas ↑</div>
+              </div>
+              <div style="flex:1 1 0;min-width:148px;padding:13px 15px;display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">CENTERTILE</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#6b6b7a">spine bounds</div>
+                <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+                  <sc-for list="{{ ctVals }}" as="f" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <span style="font-size:9px;color:#5a5a68;text-align:center;font-family:'JetBrains Mono',monospace">{{ f.k }}</span>
+                      <div style="height:28px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;color:#d6d6e0;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center">{{ f.v }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a5a68">[1,1,-1,-1] → collapsed</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT editor: preview + box model/style -->
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0e0e13;min-height:0">
+            <div style="height:42px;flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:0 14px;border-bottom:1px solid #2a2a34;background:#121217;overflow:hidden">
+              <span style="flex:0 0 auto;font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Preview</span>
+              <div style="flex:0 0 auto;display:flex;align-items:center;gap:4px;background:#1c1c24;border:1px solid #2a2a34;border-radius:7px;padding:2px">
+                <button onClick="{{ zoomOut }}" style="width:22px;height:22px;border:none;background:none;color:#cfcfda;cursor:pointer;font-size:15px;border-radius:5px">−</button>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9b9bab;min-width:40px;text-align:center">{{ zoomPct }}</span>
+                <button onClick="{{ zoomIn }}" style="width:22px;height:22px;border:none;background:none;color:#cfcfda;cursor:pointer;font-size:15px;border-radius:5px">+</button>
+              </div>
+              <span style="flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b6b7a">{{ previewDims }} pt</span>
+              <div style="flex:1"></div>
+              <div style="flex:0 0 auto;display:flex;align-items:center;gap:5px">
+                <sc-for list="{{ pvToggles }}" as="t" hint-placeholder-count="4">
+                  <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#101015 0% 25%,#0c0c10 0% 50%) 50%/22px 22px">
+              {{ borderPreview }}
+              <sc-if value="{{ showAnno }}" hint-placeholder-val="{{ true }}">
+                <div style="position:absolute;left:14px;bottom:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68;background:rgba(12,12,16,.82);border:1px solid #2a2a34;border-radius:6px;padding:5px 9px;max-width:280px;line-height:1.5">
+                  Rendered widget · <span style="color:#caa05a">margin</span> / <span style="color:#a395ff">padding</span> / <span style="color:#e76461">minSize</span>. Slice grid &amp; expansion are set in the <span style="color:#c4bbff">UV editor ↖</span>.
+                </div>
+              </sc-if>
+            </div>
+            <!-- Preview controls: box model / style -->
+            <div style="flex:0 0 auto;height:152px;border-top:1px solid #2a2a34;background:#101015;padding:13px 15px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">BOX MODEL · Style</span><span style="font-size:10px;color:#5a5a68">CSS box model · pt</span></div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:54px;font-size:11px;color:#7a7a8a">Margin</span>
+                <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+                  <sc-for list="{{ marginVals }}" as="f" hint-placeholder-count="4"><div style="height:26px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;color:#d6d6e0;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center">{{ f.v }}</div></sc-for>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:54px;font-size:11px;color:#7a7a8a">Padding</span>
+                <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+                  <sc-for list="{{ padVals }}" as="f" hint-placeholder-count="4"><div style="height:26px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;color:#d6d6e0;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center">{{ f.v }}</div></sc-for>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:54px;font-size:11px;color:#7a7a8a">MinSize</span>
+                <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                  <div style="height:26px;border-radius:6px;border:1px dashed #2a2a34;background:#0e0e13;color:#5a5a68;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center">—</div>
+                  <div style="height:26px;border-radius:6px;border:1px dashed #2a2a34;background:#0e0e13;color:#5a5a68;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;justify-content:center">—</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+           </div>
+           <!-- /two editor stacks -->
+
+          <!-- ============ SHARED BAR: overlay | mask ============ -->
+          <div style="flex:0 0 auto;height:138px;border-top:1px solid #2a2a34;background:#101015;display:flex;min-height:0">
+            <div style="flex:2.2 1 0;min-width:0;padding:14px 16px;border-right:1px solid #1c1c24;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">OVERLAY</span><span style="font-size:10px;color:#5a5a68">visible artwork layer · fill behaviour per band</span></div>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 16px;max-width:460px">
+                <sc-for list="{{ fillFields }}" as="ff" hint-placeholder-count="4">
+                  <div style="position:relative">
+                    <div style="font-size:9px;color:#7a7a8a;margin-bottom:4px;font-family:'JetBrains Mono',monospace">{{ ff.label }}</div>
+                    <button onClick="{{ ff.onClick }}" title="{{ ff.tip }}" style="{{ ff.btnStyle }}"><span style="flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis">{{ ff.value }}</span><span style="color:{{ ff.caret }}">▾</span></button>
+                    <sc-if value="{{ ff.menuOpen }}" hint-placeholder-val="{{ false }}">
+                      <div style="{{ ff.menuStyle }}">
+                        <sc-for list="{{ ff.items }}" as="m" hint-placeholder-count="5">
+                          <div onClick="{{ m.onSelect }}" style="{{ m.style }}">{{ m.mode }}</div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#6b6b7a">cells x:[4,174,858,1024] · y:[0,256,256,512] <span style="color:#5a5a68">· hover a field for its fill behaviour</span></div>
+            </div>
+            <div style="flex:1 1 0;min-width:0;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">MASK</span><span style="font-size:10px;color:#5a5a68">coverage · optional</span></div>
+              <div style="display:flex;align-items:center;gap:6px;height:30px;max-width:300px;padding:0 9px;border-radius:6px;border:1px solid #2a2a34;background:#15151b;color:#cfcfda;font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer"><span style="flex:1">#COPY <span style="color:#6b6b7a">(inherit Overlay cells)</span></span><span style="color:#6b6b7a">▾</span></div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#5a5a68;line-height:1.6;max-width:340px">Optional alpha coverage. <span style="color:#6b6b7a">#COPY</span> reuses the Overlay slice grid; pick a separate sheet to mask independently.</div>
+            </div>
+          </div>
+
+          </div>
+        </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isBackgrounds }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Backgrounds" style="flex:1;display:flex;min-height:0">
+
+          <!-- PANE A: table switcher + entry list -->
+          <section style="width:238px;flex:0 0 auto;background:#101015;border-right:1px solid #2a2a34;display:flex;flex-direction:column;min-height:0">
+            <div style="padding:12px 12px 8px;font-size:12px;font-weight:700;color:#e7e7ee">Tables</div>
+            <div style="padding:0 10px 8px;display:flex;flex-direction:column;gap:3px">
+              <sc-for list="{{ bgTables }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">
+                  <span style="flex:1;text-align:left">{{ t.label }}</span>
+                  <sc-if value="{{ t.shared }}" hint-placeholder-val="{{ false }}"><span title="Shared table — referenced by name" style="font-size:9px;color:#8c7cf6">shared</span></sc-if>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b6b7a;background:#1c1c24;border-radius:4px;padding:1px 5px">{{ t.count }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="height:1px;background:#2a2a34;margin:4px 10px 10px"></div>
+            <div style="padding:0 12px 8px;display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">{{ bgListTitle }}</span>
+              <button style="font-size:11px;color:#8c7cf6;background:none;border:none;cursor:pointer;font-family:inherit">+ new</button>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:0 8px 12px">
+              <sc-for list="{{ bgEntries }}" as="e" hint-placeholder-count="6">
+                <button onClick="{{ e.onClick }}" style="{{ e.rowStyle }}">
+                  <span style="width:18px;height:18px;border-radius:4px;flex:0 0 auto;{{ e.swatch }}"></span>
+                  <span style="flex:1;min-width:0;text-align:left;font-family:'JetBrains Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit">{{ e.name }}</span>
+                  <sc-if value="{{ e.dead }}" hint-placeholder-val="{{ false }}"><span title="Unreferenced — not packed" style="font-size:9px;color:#6b6b7a;border:1px dashed #4a4a56;border-radius:4px;padding:1px 4px">dead</span></sc-if>
+                  <sc-if value="{{ e.warn }}" hint-placeholder-val="{{ false }}"><span title="Issue" style="width:6px;height:6px;border-radius:50%;background:#e6ad4d;flex:0 0 auto"></span></sc-if>
+                  <sc-if value="{{ e.hasRefs }}" hint-placeholder-val="{{ false }}"><span title="Consumers referencing this entry" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#7a7a8a">↗{{ e.refs }}</span></sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </section>
+
+          <!-- PANE B: live preview + contextual editor -->
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0e0e13;min-height:0;overflow-y:auto">
+            <!-- live panel preview -->
+            <div style="flex:0 0 auto;padding:16px;border-bottom:1px solid #2a2a34">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Live panel preview</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">shader-style composite · approximate</span>
+                <div style="flex:1"></div>
+                <button style="height:26px;padding:0 11px;border-radius:6px;border:1px solid #2a2a34;background:#1c1c24;color:#cfcfda;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px"><span style="color:#8c7cf6">▶</span> Play anim</button>
+              </div>
+              <!-- behind scene + frosted panel -->
+              <div style="position:relative;height:208px;border-radius:10px;overflow:hidden;background:radial-gradient(120% 120% at 20% 0%,#2a2350 0%,#161427 55%,#0e0e16 100%)">
+                <div style="position:absolute;width:120px;height:120px;border-radius:50%;left:40px;top:-20px;background:radial-gradient(circle,#6f5cf0,transparent 70%);opacity:.7"></div>
+                <div style="position:absolute;width:90px;height:90px;border-radius:50%;right:60px;bottom:-10px;background:radial-gradient(circle,#e6ad4d,transparent 70%);opacity:.5"></div>
+                <!-- the themed panel -->
+                <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62%;height:64%;border-radius:10px;border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);background:linear-gradient(135deg,rgba(40,36,72,.55),rgba(20,18,34,.5));box-shadow:0 12px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden">
+                  <!-- detail layer 0: noise -->
+                  <div style="position:absolute;inset:0;opacity:.5;background-image:repeating-conic-gradient(rgba(255,255,255,.05) 0% 25%,transparent 0% 50%);background-size:4px 4px;mix-blend-mode:overlay"></div>
+                  <!-- swept light (gradient: dusk) -->
+                  <div style="position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(140,124,246,.35) 55%,rgba(230,173,77,.18) 75%,transparent 90%);mix-blend-mode:screen"></div>
+                  <div style="position:absolute;left:12px;top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.5)">Panel_0_0</div>
+                </div>
+                <!-- compositing legend pins -->
+                <sc-if value="{{ showAnno }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:absolute;right:12px;top:10px;display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#b6b6c4;background:rgba(16,16,21,.85);border:1px solid #3a3358;border-radius:5px;padding:3px 7px">layer0 · #HURL_NOISE</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#b6b6c4;background:rgba(16,16,21,.85);border:1px solid #3a3358;border-radius:5px;padding:3px 7px">light · gradient “dusk”</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#b6b6c4;background:rgba(16,16,21,.85);border:1px solid #3a3358;border-radius:5px;padding:3px 7px">Frosted Glass · blur 1.0</span>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+
+            <!-- contextual editor -->
+            <div style="flex:1;min-height:0;padding:16px">
+              <sc-if value="{{ bgIsGradients }}" hint-placeholder-val="{{ false }}">
+                <div>{{ gradientEditor }}</div>
+              </sc-if>
+              <sc-if value="{{ bgIsTexcoords }}" hint-placeholder-val="{{ false }}">
+                <div>{{ texcoordEditor }}</div>
+              </sc-if>
+              <sc-if value="{{ bgIsComposite }}" hint-placeholder-val="{{ true }}">
+                <div>{{ compositeStack }}</div>
+              </sc-if>
+            </div>
+          </section>
+
+          <!-- PANE C: inspector -->
+          <section style="width:320px;flex:0 0 auto;background:#101015;border-left:1px solid #2a2a34;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+            <div style="padding:14px 14px 28px">
+
+              <!-- BACKDROP inspector -->
+              <sc-if value="{{ bgIsBackdrops }}" hint-placeholder-val="{{ true }}">
+                <div>
+                  <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68;margin-bottom:6px">BACKDROP · enum slot</div>
+                  <button style="display:flex;align-items:center;gap:8px;width:100%;height:34px;padding:0 11px;border-radius:7px;border:1px solid #3a3358;background:rgba(140,124,246,.1);color:#e7e7ee;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;cursor:pointer"><span style="flex:1;text-align:left">Panel_0_0</span><span style="font-size:10px;color:#8c7cf6">▾</span></button>
+
+                  <!-- Detail Layer 0 -->
+                  <div style="margin-top:16px;border:1px solid #2a2a34;border-radius:9px;overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:#15151b;border-bottom:1px solid #2a2a34"><span style="font-size:11px;font-weight:700;color:#cfcfda">Detail Layer 0</span><span style="font-size:9px;color:#5a5a68;font-family:'JetBrains Mono',monospace">light0 modulates</span></div>
+                    <div style="padding:10px;display:flex;flex-direction:column;gap:9px">
+                      <div>
+                        <div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">image</div>
+                        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13"><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8fd17a">#HURL_NOISE</span><span style="font-size:10px;color:#6b6b7a">▾</span></div>
+                      </div>
+                      <div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:10px;color:#7a7a8a">texCoord</span><span style="font-size:9px;color:#e76461;background:rgba(231,100,97,.12);border-radius:3px;padding:0 4px">required</span></div>
+                        <div style="display:flex;align-items:center;gap:5px">
+                          <div style="flex:1;display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:6px;border:1px solid #3a3358;background:rgba(140,124,246,.08);cursor:pointer"><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#c4bbff">noise_uv</span><span style="font-size:10px;color:#8c7cf6">▾</span></div>
+                          <button title="Go to definition in TexCoords" style="width:28px;height:28px;border-radius:6px;border:1px solid #2a2a34;background:#1c1c24;color:#8c7cf6;cursor:pointer;font-size:12px">↗</button>
+                        </div>
+                      </div>
+                      <div style="display:flex;gap:8px">
+                        <div style="flex:1"><div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">wrapX</div><div style="display:flex;align-items:center;height:26px;padding:0 8px;border-radius:6px;border:1px solid #2a2a34;background:#15151b;font-family:'JetBrains Mono',monospace;font-size:10px;color:#cfcfda"><span style="flex:1">REPEAT</span>▾</div></div>
+                        <div style="flex:1"><div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">wrapY</div><div style="display:flex;align-items:center;height:26px;padding:0 8px;border-radius:6px;border:1px solid #2a2a34;background:#15151b;font-family:'JetBrains Mono',monospace;font-size:10px;color:#cfcfda"><span style="flex:1">REPEAT</span>▾</div></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Detail Layer 1 (dangling demo) -->
+                  <div style="margin-top:10px;border:1px solid #2a2a34;border-radius:9px;overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:#15151b;border-bottom:1px solid #2a2a34"><span style="font-size:11px;font-weight:700;color:#cfcfda">Detail Layer 1</span><span style="font-size:9px;color:#5a5a68;font-family:'JetBrains Mono',monospace">composites over layer 0</span></div>
+                    <div style="padding:10px;display:flex;flex-direction:column;gap:9px">
+                      <div>
+                        <div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">image</div>
+                        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13"><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#cfcfda">textures/fabric.png</span><span style="font-size:10px;color:#6b6b7a">▾</span></div>
+                      </div>
+                      <div>
+                        <div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">texCoord</div>
+                        <div style="display:flex;align-items:center;gap:5px">
+                          <div style="flex:1;display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:6px;border:1px solid #e76461;background:rgba(231,100,97,.08);cursor:pointer"><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#e76461">scroll_fast</span><span style="font-size:10px;color:#e76461">▾</span></div>
+                          <button style="width:28px;height:28px;border-radius:6px;border:1px solid #2a2a34;background:#1c1c24;color:#6b6b7a;cursor:pointer;font-size:12px">↗</button>
+                        </div>
+                        <div style="display:flex;align-items:flex-start;gap:6px;margin-top:6px;padding:6px 8px;border-radius:6px;background:rgba(231,100,97,.08);border:1px solid #5a2a2a">
+                          <span style="color:#e76461;font-size:11px">✕</span>
+                          <span style="font-size:10px;color:#e89b99;line-height:1.45">Dangling reference: no TexCoord named <span style="font-family:'JetBrains Mono',monospace">scroll_fast</span>. Build will silently drop this layer. <span style="color:#c4bbff;text-decoration:underline;cursor:pointer">Create it</span> · <span style="color:#c4bbff;text-decoration:underline;cursor:pointer">pick existing</span></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Frosted Glass -->
+                  <div style="display:flex;align-items:center;gap:8px;margin:18px 0 10px"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Frosted Glass</span><span style="flex:1;height:1px;background:#2a2a34"></span><span style="font-size:9px;color:#5a5a68">enabled</span></div>
+                  <sc-for list="{{ glassSliders }}" as="sl" hint-placeholder-count="3">
+                    <div style="margin-bottom:11px">
+                      <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:#9b9bab">{{ sl.label }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#cfcfda">{{ sl.val }}</span></div>
+                      <div style="height:5px;border-radius:3px;background:#1c1c24;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#6f5cf0;width:{{ sl.pct }}"></div><div style="position:absolute;top:50%;transform:translate(-50%,-50%);left:{{ sl.pct }};width:13px;height:13px;border-radius:50%;background:#8c7cf6;border:2px solid #0e0e13"></div></div>
+                    </div>
+                  </sc-for>
+                  <div style="margin-top:6px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:#9b9bab">detailOpacity</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#cfcfda">0.85</span></div><div style="height:5px;border-radius:3px;background:#1c1c24;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#6f5cf0;width:85%"></div><div style="position:absolute;top:50%;transform:translate(-50%,-50%);left:85%;width:13px;height:13px;border-radius:50%;background:#8c7cf6;border:2px solid #0e0e13"></div></div></div>
+                </div>
+              </sc-if>
+
+              <!-- LIGHTS inspector -->
+              <sc-if value="{{ bgIsLights }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68;margin-bottom:6px">LIGHT · enum slot</div>
+                  <button style="display:flex;align-items:center;gap:8px;width:100%;height:34px;padding:0 11px;border-radius:7px;border:1px solid #3a3358;background:rgba(140,124,246,.1);color:#e7e7ee;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;cursor:pointer"><span style="flex:1;text-align:left">Header_0_0</span><span style="font-size:10px;color:#8c7cf6">▾</span></button>
+                  <div style="margin-top:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:10px;color:#7a7a8a">gradient</span><span style="font-size:9px;color:#e76461;background:rgba(231,100,97,.12);border-radius:3px;padding:0 4px">required</span></div>
+                    <div style="display:flex;align-items:center;gap:5px"><div style="flex:1;display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:6px;border:1px solid #3a3358;background:rgba(140,124,246,.08);cursor:pointer"><span style="width:36px;height:12px;border-radius:2px;background:linear-gradient(90deg,#6f5cf0,#e6ad4d)"></span><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#c4bbff">dusk</span><span style="font-size:10px;color:#8c7cf6">▾</span></div><button title="Go to definition" style="width:28px;height:28px;border-radius:6px;border:1px solid #2a2a34;background:#1c1c24;color:#8c7cf6;cursor:pointer;font-size:12px">↗</button></div>
+                  </div>
+                  <div style="margin-top:11px"><div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">texCoord <span style="color:#5a5a68">optional · falls back to layer index</span></div><div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:6px;border:1px solid #2a2a34;background:#15151b"><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6b6b7a">— none —</span><span style="font-size:10px;color:#6b6b7a">▾</span></div></div>
+                  <div style="display:flex;align-items:center;gap:8px;margin:16px 0 10px"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Sweep</span><span style="flex:1;height:1px;background:#2a2a34"></span></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 10px">
+                    <div><div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">direction [x,y]</div><div style="display:flex;gap:5px"><div style="flex:1;height:26px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;font-family:'JetBrains Mono',monospace;font-size:10px;color:#d6d6e0;display:flex;align-items:center;justify-content:center">1</div><div style="flex:1;height:26px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;font-family:'JetBrains Mono',monospace;font-size:10px;color:#d6d6e0;display:flex;align-items:center;justify-content:center">0.3</div></div></div>
+                    <div><div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">mode</div><div style="display:flex;align-items:center;height:26px;padding:0 8px;border-radius:6px;border:1px solid #2a2a34;background:#15151b;font-family:'JetBrains Mono',monospace;font-size:10px;color:#cfcfda"><span style="flex:1">Sine</span>▾</div></div>
+                    <div><div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">scale</div><div style="height:26px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;font-family:'JetBrains Mono',monospace;font-size:10px;color:#d6d6e0;display:flex;align-items:center;justify-content:center">2.0</div></div>
+                    <div><div style="font-size:10px;color:#7a7a8a;margin-bottom:4px">amplitude</div><div style="height:26px;border-radius:6px;border:1px solid #2a2a34;background:#0e0e13;font-family:'JetBrains Mono',monospace;font-size:10px;color:#d6d6e0;display:flex;align-items:center;justify-content:center">1.0</div></div>
+                  </div>
+                  <div style="margin-top:11px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:#9b9bab">radial <span style="color:#5a5a68">0 linear → 1 circular</span></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#cfcfda">0.35</span></div><div style="height:5px;border-radius:3px;background:#1c1c24;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#6f5cf0;width:35%"></div><div style="position:absolute;top:50%;transform:translate(-50%,-50%);left:35%;width:13px;height:13px;border-radius:50%;background:#8c7cf6;border:2px solid #0e0e13"></div></div></div>
+                </div>
+              </sc-if>
+
+              <!-- TEXCOORDS inspector -->
+              <sc-if value="{{ bgIsTexcoords }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68;margin-bottom:6px">TEXCOORD · shared · free-form name</div>
+                  <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 11px;border-radius:7px;border:1px solid #2a2a34;background:#15151b;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#e7e7ee">drift_warn</div>
+                  <div style="display:flex;align-items:flex-start;gap:7px;margin-top:12px;padding:8px 10px;border-radius:7px;background:rgba(230,173,77,.08);border:1px solid #4a3a2a"><span style="color:#e6ad4d">▲</span><span style="font-size:10px;color:#d8b97a;line-height:1.5"><b>timeFactor = 0.5</b> — only <span style="font-family:'JetBrains Mono',monospace">0</span> is reliable (shader reinterprets the float as int). Nonzero values misbehave until that bug is fixed.</span></div>
+                  <div style="margin-top:16px;font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68;margin-bottom:8px">REFERENCED BY · 1 consumer</div>
+                  <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid #2a2a34;background:#15151b;cursor:pointer"><span style="font-size:11px;color:#7a7a8a">Backgrounds ›</span><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#cfcfda">Decoration_0 · layer 1</span><span style="color:#8c7cf6;font-size:12px">↗</span></div>
+                </div>
+              </sc-if>
+
+              <!-- GRADIENTS inspector -->
+              <sc-if value="{{ bgIsGradients }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68;margin-bottom:6px">GRADIENT · shared · free-form name</div>
+                  <div style="display:flex;align-items:center;gap:7px;height:34px;padding:0 11px;border-radius:7px;border:1px solid #2a2a34;background:#15151b;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#e7e7ee">dusk</div>
+                  <div style="margin-top:14px;font-size:10px;color:#5a5a68">128-texel RGBA16F row · linearized at pack</div>
+                  <div style="margin-top:14px;font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68;margin-bottom:8px">REFERENCED BY · 4 consumers</div>
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid #2a2a34;background:#15151b;cursor:pointer"><span style="font-size:11px;color:#7a7a8a">Lights ›</span><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#cfcfda">Header_0_0</span><span style="color:#8c7cf6;font-size:12px">↗</span></div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid #2a2a34;background:#15151b;cursor:pointer"><span style="font-size:11px;color:#7a7a8a">Lights ›</span><span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:#cfcfda">Panel_0_1</span><span style="color:#8c7cf6;font-size:12px">↗</span></div>
+                    <div style="font-size:10px;color:#6b6b7a;padding:2px 4px">+ 2 more</div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCurves }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Response Curves" style="flex:1;display:flex;min-height:0">
+
+          <!-- PANE A -->
+          <section style="width:238px;flex:0 0 auto;background:#101015;border-right:1px solid #2a2a34;display:flex;flex-direction:column;min-height:0">
+            <div style="padding:12px 12px 8px;font-size:12px;font-weight:700;color:#e7e7ee">Tables</div>
+            <div style="padding:0 10px 8px;display:flex;flex-direction:column;gap:3px">
+              <sc-for list="{{ rcTables }}" as="t" hint-placeholder-count="6">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}"><span style="flex:1;text-align:left">{{ t.label }}</span><sc-if value="{{ t.shared }}" hint-placeholder-val="{{ false }}"><span style="font-size:9px;color:#8c7cf6">shared</span></sc-if><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6b6b7a;background:#1c1c24;border-radius:4px;padding:1px 5px">{{ t.count }}</span></button>
+              </sc-for>
+            </div>
+            <div style="height:1px;background:#2a2a34;margin:4px 10px 10px"></div>
+            <div style="padding:0 12px 8px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#5a5a68">{{ rcListTitle }}</span><button style="font-size:11px;color:#8c7cf6;background:none;border:none;cursor:pointer;font-family:inherit">+ new</button></div>
+            <div style="flex:1;overflow-y:auto;padding:0 8px 12px">
+              <sc-for list="{{ rcEntries }}" as="e" hint-placeholder-count="6">
+                <button onClick="{{ e.onClick }}" style="{{ e.rowStyle }}">
+                  <span style="width:18px;height:18px;border-radius:4px;flex:0 0 auto;{{ e.swatch }}"></span>
+                  <span style="flex:1;min-width:0;text-align:left;font-family:'JetBrains Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit">{{ e.name }}</span>
+                  <sc-if value="{{ e.dead }}" hint-placeholder-val="{{ false }}"><span title="Unreferenced — not packed" style="font-size:9px;color:#6b6b7a;border:1px dashed #4a4a56;border-radius:4px;padding:1px 4px">dead</span></sc-if>
+                  <sc-if value="{{ e.warn }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:50%;background:#e6ad4d;flex:0 0 auto"></span></sc-if>
+                  <sc-if value="{{ e.hasRefs }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#7a7a8a">↗{{ e.refs }}</span></sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </section>
+
+          <!-- PANE B -->
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0e0e13;min-height:0;overflow-y:auto">
+            <!-- sample widget preview -->
+            <div style="flex:0 0 auto;padding:16px;border-bottom:1px solid #2a2a34">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Feedback preview</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">plays on a sample widget</span></div>
+              <div style="position:relative;height:150px;border-radius:10px;background:repeating-conic-gradient(#101015 0% 25%,#0c0c10 0% 50%) 50%/20px 20px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                <div style="{{ widgetStyle }}">
+                  <span style="font-size:13px;font-weight:600;color:#fff">Sample</span>
+                </div>
+                <div style="position:absolute;left:12px;top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">archetype <span style="color:#c4bbff">Button_0</span></div>
+              </div>
+              <!-- triggers -->
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+                <sc-for list="{{ rcTriggers }}" as="tg" hint-placeholder-count="5">
+                  <button onClick="{{ tg.onClick }}" style="{{ tg.style }}">{{ tg.label }}</button>
+                </sc-for>
+              </div>
+              <!-- timeline scrubber -->
+              <div style="display:flex;align-items:center;gap:11px;margin-top:14px">
+                <button onClick="{{ togglePlay }}" style="width:30px;height:30px;border-radius:7px;border:none;background:#6f5cf0;color:#fff;cursor:pointer;font-size:13px;flex:0 0 auto">▶</button>
+                <div onPointerDown="{{ scrubTrack }}" style="flex:1;position:relative;height:30px;display:flex;align-items:center;cursor:pointer">
+                  <div style="position:absolute;left:0;right:0;height:6px;border-radius:3px;background:#1c1c24"></div>
+                  <div style="position:absolute;left:0;height:6px;border-radius:3px;background:#6f5cf0;width:{{ scrubPct }}"></div>
+                  <div style="position:absolute;left:{{ scrubPct }};top:50%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;background:#8c7cf6;border:2px solid #0e0e13;box-shadow:0 0 0 1px rgba(140,124,246,.5)"></div>
+                </div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9b9bab;flex:0 0 auto;width:48px;text-align:right">{{ scrubTime }}</span>
+              </div>
+            </div>
+
+            <!-- contextual editor -->
+            <div style="flex:1;min-height:0;padding:16px">
+              <sc-if value="{{ rcIsCurves }}" hint-placeholder-val="{{ true }}">
+                <div>
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Event wiring · Button_0</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">state / signal → Event</span></div>
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <sc-for list="{{ rcWiring }}" as="w" hint-placeholder-count="8">
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <span style="width:124px;flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9b9bab">{{ w.state }}</span>
+                        <div style="flex:1;display:flex;align-items:center;gap:5px">
+                          <div style="{{ w.pickerStyle }}"><span style="flex:1">{{ w.value }}</span><span style="font-size:10px;{{ w.caret }}">▾</span></div>
+                          <button title="Go to Event" style="{{ w.gotoStyle }}">↗</button>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ rcIsEvents }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Event channels · hover_pop</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">channel → table ref</span></div>
+                  <div style="display:flex;flex-direction:column;gap:7px">
+                    <sc-for list="{{ rcChannels }}" as="c" hint-placeholder-count="7">
+                      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid #2a2a34;background:#15151b">
+                        <span style="width:84px;flex:0 0 auto;font-size:11px;font-weight:600;color:#cfcfda">{{ c.label }}</span>
+                        <span style="width:78px;flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6b6b7a">{{ c.target }}</span>
+                        <div style="flex:1;display:flex;align-items:center;gap:5px">
+                          <div style="{{ c.pickerStyle }}"><span style="flex:1">{{ c.value }}</span><span style="{{ c.caret }};font-size:10px">▾</span></div>
+                          <span style="{{ c.spark }}"></span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ rcIsSpline }}" hint-placeholder-val="{{ false }}">
+                <div>{{ splineEditor }}</div>
+              </sc-if>
+              <sc-if value="{{ rcIsGradients }}" hint-placeholder-val="{{ false }}">
+                <div>{{ curveGradientEditor }}</div>
+              </sc-if>
+              <sc-if value="{{ rcIsSounds }}" hint-placeholder-val="{{ false }}">
+                <div>{{ soundEditor }}</div>
+              </sc-if>
+            </div>
+          </section>
+
+          <!-- PANE C -->
+          <section style="width:320px;flex:0 0 auto;background:#101015;border-left:1px solid #2a2a34;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+            <div style="padding:14px 14px 28px">{{ rcInspector }}</div>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCoding }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Coding Themes" style="flex:1;display:flex;min-height:0">
+
+          <!-- role list -->
+          <section style="width:390px;flex:0 0 auto;background:#101015;border-right:1px solid #2a2a34;display:flex;flex-direction:column;min-height:0">
+            <div style="padding:14px 14px 12px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <span style="font-size:12px;font-weight:700;color:#e7e7ee">Palette</span>
+                <div style="flex:1"></div>
+                <div style="display:flex;background:#1c1c24;border:1px solid #2a2a34;border-radius:8px;padding:2px">
+                  <button onClick="{{ setLight }}" style="{{ lightBtn }}">Light</button>
+                  <button onClick="{{ setDark }}" style="{{ darkBtn }}">Dark</button>
+                </div>
+              </div>
+              <div style="font-size:10px;color:#5a5a68;line-height:1.5">~18 optional roles. Unset roles fall back to engine defaults. Alpha packs to <span style="font-family:'JetBrains Mono',monospace;color:#9b9bab">RGB5551</span> — a single on/off bit, not a ramp.</div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:0 10px 14px;display:flex;flex-direction:column;gap:2px">
+              <sc-for list="{{ codingRoles }}" as="r" hint-placeholder-count="18">
+                <div style="{{ r.rowStyle }}">
+                  <sc-if value="{{ r.isSet }}" hint-placeholder-val="{{ true }}">
+                    <label style="position:relative;width:24px;height:24px;flex:0 0 auto;border-radius:6px;overflow:hidden;border:1px solid #3a3a46;cursor:pointer;{{ r.swatchBg }}">
+                      <input type="color" value="{{ r.hex }}" onInput="{{ r.onColor }}" style="position:absolute;inset:-4px;width:32px;height:32px;cursor:pointer">
+                    </label>
+                  </sc-if>
+                  <sc-if value="{{ r.unset }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ r.onEnable }}" title="Enable this role" style="width:24px;height:24px;flex:0 0 auto;border-radius:6px;border:1px dashed #4a4a56;background:repeating-conic-gradient(#23232c 0% 25%,#1a1a22 0% 50%) 50%/7px 7px;cursor:pointer;color:#6b6b7a;font-size:13px">+</button>
+                  </sc-if>
+                  <span style="flex:1;font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ r.nameColor }}">{{ r.role }}</span>
+                  <sc-if value="{{ r.isSet }}" hint-placeholder-val="{{ true }}">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#7a7a8a">{{ r.hex }}</span>
+                    <button onClick="{{ r.onToggleAlpha }}" title="Alpha bit (RGB5551 · 1-bit)" style="{{ r.alphaStyle }}">α</button>
+                  </sc-if>
+                  <sc-if value="{{ r.unset }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:10px;color:#6b6b7a;border:1px dashed #4a4a56;border-radius:4px;padding:1px 6px">default</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+
+          <!-- live code sample -->
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0e0e13;min-height:0">
+            <div style="height:42px;flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid #2a2a34">
+              <span style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#8a8a9a;text-transform:uppercase">Live sample · {{ codingModeLabel }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">recolors as you edit · in-game text buffer</span>
+              <div style="flex:1"></div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#5a5a68">BufferThemes::{{ codingModeLabel }}</span>
+            </div>
+            <div style="flex:1;min-height:0;overflow:auto;padding:18px">
+              {{ codeSample }}
+            </div>
+            <sc-if value="{{ showAnno }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:0 0 auto;border-top:1px solid #2a2a34;background:#101015;padding:10px 16px;display:flex;align-items:center;gap:10px">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.06em;color:#8c7cf6"><span style="width:14px;height:14px;border-radius:50%;background:#8c7cf6;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center">i</span>NOTE</span>
+                <span style="font-size:11px;color:#a6a6b6;line-height:1.4">Edit a swatch on the left and the matching tokens recolor instantly. The <span style="font-family:'JetBrains Mono',monospace;color:#cfcfda">α</span> toggle is binary because RGB5551 stores one alpha bit. Gutter marks show <span style="color:#5cbb85">SavedLines</span> / <span style="color:#5c8fdb">ModifiedLines</span>.</span>
+              </div>
+            </sc-if>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAssets }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Assets" style="flex:1;display:flex;min-height:0">
+
+          <section style="flex:1;min-width:0;display:flex;flex-direction:column;background:#0e0e13;min-height:0">
+            <div style="height:48px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid #2a2a34;background:#121217">
+              <div style="display:flex;background:#1c1c24;border:1px solid #2a2a34;border-radius:8px;padding:2px">
+                <button onClick="{{ setImagesTab }}" style="{{ imagesTabBtn }}">Images</button>
+                <button onClick="{{ setSoundsTab }}" style="{{ soundsTabBtn }}">Sounds</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;height:30px;padding:0 10px;border-radius:7px;border:1px solid #2a2a34;background:#15151b;color:#6b6b7a;font-size:12px;width:200px"><span>⌕</span><span>Search assets…</span></div>
+              <div style="flex:1"></div>
+              <span style="font-size:11px;color:#7a7a8a"><span style="color:#e76461;font-weight:600">2</span> format issues · <span style="color:#6b6b7a">1 unreferenced</span></span>
+              <button style="height:30px;padding:0 13px;border-radius:7px;border:1px solid #6f5cf0;background:rgba(140,124,246,.14);color:#c4bbff;font-size:12px;font-weight:600;cursor:pointer">+ Import</button>
+            </div>
+
+            <div style="flex:1;min-height:0;overflow-y:auto;padding:16px">
+              <!-- IMAGES grid -->
+              <sc-if value="{{ assetIsImages }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px">
+                  <sc-for list="{{ assetImages }}" as="a" hint-placeholder-count="9">
+                    <button onClick="{{ a.onClick }}" style="{{ a.cardStyle }}">
+                      <div style="position:relative;height:96px;border-radius:7px;overflow:hidden;background:repeating-conic-gradient(#23232c 0% 25%,#1a1a22 0% 50%) 50%/14px 14px;display:flex;align-items:center;justify-content:center">
+                        <span style="{{ a.thumbInner }}"></span>
+                        <sc-if value="{{ a.bad }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;background:rgba(231,100,97,.14);display:flex;align-items:center;justify-content:center"><span style="font-size:22px;color:#e76461">⚠</span></span></sc-if>
+                        <span style="{{ a.fmtBadge }}">{{ a.fmt }}</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+                        <span style="flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:11px;color:{{ a.nameColor }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left">{{ a.name }}</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:6px;margin-top:5px">{{ a.statusTag }}</div>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <!-- SOUNDS list -->
+              <sc-if value="{{ assetIsSounds }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <sc-for list="{{ assetSounds }}" as="a" hint-placeholder-count="3">
+                    <button onClick="{{ a.onClick }}" style="{{ a.rowStyle }}">
+                      <span style="width:34px;height:34px;flex:0 0 auto;border-radius:8px;background:#1c1c24;border:1px solid #2a2a34;display:flex;align-items:center;justify-content:center;color:#8c7cf6;font-size:13px">▶</span>
+                      <div style="flex:0 0 auto;width:120px;height:24px;display:flex;align-items:center;gap:2px;overflow:hidden">{{ a.wave }}</div>
+                      <span style="flex:1;min-width:0;font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ a.nameColor }};text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.name }}</span>
+                      <span style="{{ a.fmtBadge }}">{{ a.fmt }}</span>
+                      <div style="width:140px;flex:0 0 auto;display:flex;justify-content:flex-end">{{ a.statusTag }}</div>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </section>
+
+          <!-- inspector -->
+          <section style="width:320px;flex:0 0 auto;background:#101015;border-left:1px solid #2a2a34;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+            <div style="padding:14px 14px 28px">{{ assetInspector }}</div>
+          </section>
+        </div>
+      </sc-if>
+
+      <!-- ISSUES DRAWER -->
+      <sc-if value="{{ issuesOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;right:0;top:0;bottom:0;width:380px;background:#121217;border-left:1px solid #2a2a34;box-shadow:-12px 0 32px rgba(0,0,0,.45);z-index:40;display:flex;flex-direction:column">{{ issuesPanel }}</div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    surface: 'borders',
+    showAnno: true,
+    issuesOpen: false,
+    // borders
+    selBorder: 'Window_0',
+    previewW: 300, previewH: 208, zoom: 1.0,
+    bShow: { box: true, bands: true, cuts: true, expansion: true },
+    uvShow: { cuts: true, center: true, expansion: true, mask: false },
+    pvShow: { margin: true, padding: true, minsize: false, chrome: true },
+    edgeFill: ['STRETCH', 'STRETCH'], centerFill: ['STRETCH', 'STRETCH'], fillMenu: null, fillDemo: 'edgeX',
+    // backgrounds
+    selBg: 'Panel_0_0', selBgTable: 'backdrops',
+    assetTab: 'images', selAsset: 'panels/wood_frame.png',
+    // curves
+    selCurve: 'Button_0', selEvent: 'hover_pop', scrub: 0.32, playState: 'OnHoverBegin',
+    // coding
+    codingMode: 'Dark', selRole: 'Keyword', codingSplit: false,
+    themes: this.defaultThemes(),
+    openPicker: null,
+  };
+
+  defaultThemes() {
+    const D = {
+      Background:['#14141a',true], Text:['#d6d6e0',true], LineNumber:['#44485a',true],
+      Comment:['#6b7280',true], Keyword:['#c08cf0',true], Keyword_TypeModifier:['#b07be0',true],
+      String:['#8fd17a',true], Integer:['#e6b86b',true], Builtin_Type:['#6fb6e8',true],
+      Builtin_Function:['#e88fb0',true], Preprocessor:['#9aa0b0',true], Error:['#e76461',true],
+      Warnings:['#e6ad4d',true], Line:['#1a1a22',true], SideBar:['#101015',true],
+      ScrollBar:null, ModifiedLines:['#3a7bd5',true], SavedLines:null,
+    };
+    const L = {
+      Background:['#f6f6f3',true], Text:['#2a2a30',true], LineNumber:['#b6b6c0',true],
+      Comment:['#9aa0ab',true], Keyword:['#8a3fc0',true], Keyword_TypeModifier:['#7a36b0',true],
+      String:['#3f8f3a',true], Integer:['#b07a1a',true], Builtin_Type:['#1f6fb0',true],
+      Builtin_Function:['#c0507a',true], Preprocessor:['#70788a',true], Error:['#d2403c',true],
+      Warnings:['#c08a20',true], Line:['#ececea',true], SideBar:['#eeeeea',true],
+      ScrollBar:null, ModifiedLines:null, SavedLines:null,
+    };
+    return { Dark: D, Light: L };
+  }
+
+  // ---- handlers ----
+  setSurface = (s) => this.setState({ surface: s, issuesOpen: false });
+  toggleAnno = () => this.setState(p => ({ showAnno: !p.showAnno }));
+  toggleIssues = () => this.setState(p => ({ issuesOpen: !p.issuesOpen }));
+  selectBorder = (n) => this.setState({ selBorder: n });
+  toggleFillMenu = (id) => this.setState(p => ({ fillMenu: p.fillMenu === id ? null : id }));
+  setFill = (id, mode) => this.setState(p => {
+    const ef = [...p.edgeFill], cf = [...p.centerFill];
+    if (id === 'eX') ef[0] = mode; else if (id === 'eY') ef[1] = mode;
+    else if (id === 'cX') cf[0] = mode; else cf[1] = mode;
+    return { edgeFill: ef, centerFill: cf, fillMenu: null, fillDemo: ({eX:'edgeX',eY:'edgeY',cX:'centerX',cY:'centerY'})[id] };
+  });
+  setCodingMode = (m) => this.setState({ codingMode: m });
+  selectRole = (r) => this.setState({ selRole: r });
+  setRoleColor = (r, hex) => this.setState(p => {
+    const t = { ...p.themes };
+    const m = { ...t[p.codingMode] };
+    const cur = m[r] || ['#888888', true];
+    m[r] = [hex, cur[1]];
+    t[p.codingMode] = m;
+    return { themes: t };
+  });
+  toggleRoleAlpha = (r) => this.setState(p => {
+    const t = { ...p.themes }; const m = { ...t[p.codingMode] };
+    const cur = m[r]; if (!cur) return {};
+    m[r] = [cur[0], !cur[1]]; t[p.codingMode] = m; return { themes: t };
+  });
+  setRoleDefault = (r) => this.setState(p => {
+    const t = { ...p.themes }; const m = { ...t[p.codingMode] }; m[r] = null; t[p.codingMode] = m; return { themes: t };
+  });
+  enableRole = (r) => this.setState(p => {
+    const t = { ...p.themes }; const m = { ...t[p.codingMode] }; m[r] = ['#888aa0', true]; t[p.codingMode] = m; return { themes: t };
+  });
+  zoomBy = (d) => this.setState(p => ({ zoom: Math.min(4, Math.max(0.5, +(p.zoom + d).toFixed(2))) }));
+  togglePicker = (id) => this.setState(p => ({ openPicker: p.openPicker === id ? null : id }));
+  setScrub = (v) => this.setState({ scrub: v });
+  setPlayState = (s) => this.setState({ playState: s });
+  selectEvent = (e) => this.setState({ selEvent: e });
+
+  startResize = (e) => {
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY, w0 = this.state.previewW, h0 = this.state.previewH, z = this.state.zoom;
+    const move = (ev) => this.setState({
+      previewW: Math.max(96, Math.round(w0 + (ev.clientX - sx) / z)),
+      previewH: Math.max(72, Math.round(h0 + (ev.clientY - sy) / z)),
+    });
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  };
+
+  renderVals() {
+    const s = this.state;
+    return {
+      isBorders: s.surface === 'borders',
+      isBackgrounds: s.surface === 'backgrounds',
+      isCurves: s.surface === 'curves',
+      isCoding: s.surface === 'coding',
+      isAssets: s.surface === 'assets',
+      issuesOpen: s.issuesOpen,
+      toggleIssues: this.toggleIssues,
+      toggleAnno: this.toggleAnno,
+      annoState: s.showAnno ? 'ON' : 'OFF',
+      annoBtnStyle: 'display:flex;align-items:center;gap:8px;width:100%;height:34px;padding:0 9px;border-radius:7px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ' + (s.showAnno ? '#3a3358' : '#2a2a34') + ';background:' + (s.showAnno ? 'rgba(140,124,246,.12)' : '#15151b') + ';color:' + (s.showAnno ? '#c4bbff' : '#9b9bab'),
+      navSurfaces: this.buildNav([
+        ['borders','Borders','▥','12'],
+        ['backgrounds','Backgrounds','◧','7', true],
+        ['curves','Response Curves','◠','9'],
+        ['coding','Coding Themes','◑','2'],
+      ]),
+      navAssets: this.buildNav([
+        ['assets','Images','▢','9', true],
+        ['assets','Sounds','◇','3'],
+      ], true),
+      showAnno: s.showAnno,
+      selBorderName: s.selBorder,
+      zoomPct: Math.round(s.zoom * 100) + '%',
+      previewDims: s.previewW + ' × ' + s.previewH,
+      zoomIn: () => this.zoomBy(0.1),
+      zoomOut: () => this.zoomBy(-0.1),
+      startResize: this.startResize,
+      togglePickerAddSlot: () => this.togglePicker('addSlot'),
+      addSlotOpen: s.openPicker === 'addSlot',
+      unusedSlots: ['Header_0','Footer_0','Slider_0','Tab_0','ListItem_0','RaisedGroupBox_0','Panel_2_1','FlatGroupBox_1_3','Decoration_0','GridItem_2'],
+      borderSlots: this.buildBorderSlots(),
+      uvToggles: this.buildUvToggles(),
+      pvToggles: this.buildPvToggles(),
+      uvEditor: this.buildUVEditor(),
+      tessVals: [{k:'L',v:'32',border:'#2a2a34'},{k:'T',v:'64',border:'#2a2a34'},{k:'R',v:'32',border:'#2a2a34'},{k:'B',v:'64',border:'#2a2a34'}],
+      expVals: [{k:'L',v:'32'},{k:'T',v:'20'},{k:'R',v:'32'},{k:'B',v:'20'}],
+      ctVals: [{k:'x0',v:'1'},{k:'y0',v:'1'},{k:'x1',v:'-1'},{k:'y1',v:'-1'}],
+      marginVals: [{v:'8'},{v:'8'},{v:'8'},{v:'8'}],
+      padVals: [{v:'4'},{v:'4'},{v:'4'},{v:'4'}],
+      fillFields: this.buildFillFields(),
+      fillSchematic: this.buildFillSchematic(),
+      borderPreview: this.buildBorderPreview(),
+      borderAnnoPins: this.buildBorderPins(),
+      borderLegend: this.borderLegendItems(),
+      bgTables: this.buildBgTables(),
+      bgEntries: this.buildBgEntries(),
+      bgListTitle: ({backdrops:'BACKDROPS',lights:'LIGHTS',texcoords:'TEXCOORDS',gradients:'GRADIENTS'})[s.selBgTable],
+      bgIsBackdrops: s.selBgTable === 'backdrops',
+      bgIsLights: s.selBgTable === 'lights',
+      bgIsTexcoords: s.selBgTable === 'texcoords',
+      bgIsGradients: s.selBgTable === 'gradients',
+      bgIsComposite: s.selBgTable === 'backdrops' || s.selBgTable === 'lights',
+      glassSliders: [{label:'blur',val:'1.0',pct:'50%'},{label:'zoom',val:'1.2',pct:'40%'},{label:'opacity',val:'0.6',pct:'60%'}],
+      gradientEditor: this.buildGradientEditor(),
+      texcoordEditor: this.buildTexcoordEditor(),
+      compositeStack: this.buildCompositeStack(),
+      rcTables: this.buildRcTables(),
+      rcListTitle: ({curves:'ARCHETYPES',events:'EVENTS',spline1d:'1D SPLINES',spline2d:'2D SPLINES',gradients:'GRADIENTS',sounds:'SOUND EFFECTS'})[s.selCurveTable || 'curves'],
+      rcEntries: this.buildRcEntries(),
+      rcIsCurves: (s.selCurveTable||'curves') === 'curves',
+      rcIsEvents: s.selCurveTable === 'events',
+      rcIsSpline: s.selCurveTable === 'spline1d' || s.selCurveTable === 'spline2d',
+      rcIsGradients: s.selCurveTable === 'gradients',
+      rcIsSounds: s.selCurveTable === 'sounds',
+      widgetStyle: this.widgetStyle(),
+      rcTriggers: this.buildRcTriggers(),
+      togglePlay: () => this.setState(p => ({ scrub: p.scrub >= 0.99 ? 0 : p.scrub })),
+      scrubTrack: this.scrubTrack,
+      scrubPct: Math.round(s.scrub * 100) + '%',
+      scrubTime: (s.scrub * 0.6).toFixed(2) + 's',
+      rcWiring: this.buildRcWiring(),
+      rcChannels: this.buildRcChannels(),
+      splineEditor: this.buildSplineEditor(),
+      curveGradientEditor: this.buildCurveGradient(),
+      soundEditor: this.buildSoundEditor(),
+      rcInspector: this.buildRcInspector(),
+      codingModeLabel: s.codingMode,
+      setLight: () => this.setCodingMode('Light'),
+      setDark: () => this.setCodingMode('Dark'),
+      lightBtn: this.modeBtn('Light'),
+      darkBtn: this.modeBtn('Dark'),
+      codingRoles: this.buildCodingRoles(),
+      codeSample: this.buildCodeSample(),
+      assetIsImages: s.assetTab === 'images',
+      assetIsSounds: s.assetTab === 'sounds',
+      setImagesTab: () => this.setState({ assetTab: 'images' }),
+      setSoundsTab: () => this.setState({ assetTab: 'sounds' }),
+      imagesTabBtn: this.assetTabBtn('images'),
+      soundsTabBtn: this.assetTabBtn('sounds'),
+      assetImages: this.buildAssetImages(),
+      assetSounds: this.buildAssetSounds(),
+      assetInspector: this.buildAssetInspector(),
+      issuesPanel: this.renderIssues(),
+    };
+  }
+
+  buildNav(items, assets) {
+    const active = this.state.surface;
+    return items.map(([key,label,icon,count,warn]) => {
+      const isOn = assets ? (active === 'assets' && this.state.assetTab === (label === 'Images' ? 'images' : 'sounds')) : active === key;
+      return {
+        label, icon, count, warn: !!warn,
+        onClick: () => assets ? this.setState({ surface: 'assets', assetTab: label === 'Images' ? 'images' : 'sounds', issuesOpen: false }) : this.setSurface(key),
+        iconWrap: 'display:inline-flex;width:20px;height:20px;align-items:center;justify-content:center;font-size:14px;color:' + (isOn ? '#c4bbff' : '#7a7a8a'),
+        style: 'display:flex;align-items:center;gap:9px;width:100%;height:36px;padding:0 9px;margin-bottom:2px;border-radius:7px;border:1px solid ' + (isOn ? '#3a3358' : 'transparent') + ';background:' + (isOn ? 'rgba(140,124,246,.13)' : 'transparent') + ';color:' + (isOn ? '#e7e7ee' : '#b6b6c4') + ';font-family:inherit;font-size:13px;font-weight:' + (isOn ? '600' : '500') + ';cursor:pointer',
+      };
+    });
+  }
+
+  buildBorderSlots() {
+    const data = [
+      ['Window_0', false, 0, false], ['GridItem_0', true, 3, false], ['GridItem_1', true, 3, false],
+      ['GridItem_2', true, 4, false], ['GridItem_3', true, 4, false], ['Decoration_0', false, 0, false],
+      ['Decoration_1', false, 0, false], ['FlatGroupBox_0', false, 0, true], ['FlatGroupBox_1', false, 0, true],
+      ['FlatGroupBox_1_0', true, 3, false], ['Backing_0', false, 0, false], ['Backing_1', false, 0, false],
+      ['Panel_0_0', false, 0, false], ['Panel_0_1', false, 0, false], ['Slider_0', true, 4, false],
+      ['RaisedGroupBox_0', true, 2, false], ['IndentGroupBox_0', true, 2, false],
+    ];
+    const sel = this.state.selBorder;
+    return data.map(([name, shared, shareCount, warn]) => {
+      const on = name === sel;
+      return {
+        name, shared, shareCount, warn,
+        onClick: () => this.selectBorder(name),
+        rowStyle: 'display:flex;align-items:center;gap:8px;width:100%;height:36px;padding:0 8px;margin-bottom:2px;border-radius:7px;border:1px solid ' + (on ? '#3a3358' : 'transparent') + ';background:' + (on ? 'rgba(140,124,246,.13)' : 'transparent') + ';color:' + (on ? '#e7e7ee' : '#b6b6c4') + ';cursor:pointer;font-family:inherit',
+      };
+    });
+  }
+
+  buildUvToggles() {
+    const f = this.state.uvShow;
+    const items = [['cuts','Cuts'],['center','Center tile'],['expansion','Expansion'],['mask','Mask']];
+    return items.map(([key,label]) => {
+      const on = f[key];
+      return {
+        label,
+        onClick: () => this.setState(p => ({ uvShow: { ...p.uvShow, [key]: !p.uvShow[key] } })),
+        style: 'height:24px;padding:0 9px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#3a3358' : '#2a2a34') + ';background:' + (on ? 'rgba(140,124,246,.14)' : '#1c1c24') + ';color:' + (on ? '#c4bbff' : '#8a8a9a'),
+      };
+    });
+  }
+
+  buildPvToggles() {
+    const f = this.state.pvShow;
+    const items = [['margin','Margin'],['padding','Padding'],['minsize','MinSize'],['chrome','Chrome']];
+    return items.map(([key,label]) => {
+      const on = f[key];
+      return {
+        label,
+        onClick: () => this.setState(p => ({ pvShow: { ...p.pvShow, [key]: !p.pvShow[key] } })),
+        style: 'height:24px;padding:0 9px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:500;cursor:pointer;border:1px solid ' + (on ? '#3a3358' : '#2a2a34') + ';background:' + (on ? 'rgba(230,173,77,.12)' : '#1c1c24') + ';color:' + (on ? '#e6c98a' : '#8a8a9a'),
+      };
+    });
+  }
+
+  buildFillFields() {
+    const s = this.state;
+    const modes = ['STRETCH', 'TILE', 'FLEXIBLE', 'CENTER', 'SNAP'];
+    const defs = [['eX', 'Edge X', s.edgeFill[0]], ['eY', 'Edge Y', s.edgeFill[1]], ['cX', 'Center X', s.centerFill[0]], ['cY', 'Center Y', s.centerFill[1]]];
+    return defs.map(([id, label, value], i) => {
+      const open = s.fillMenu === id;
+      const alignRight = i % 2 === 1; // 2×2 grid: right-align only the right-column cells (Edge Y, Center Y)
+      const fillDesc = { STRETCH: 'one source cell scaled to fill the band', TILE: 'repeats at native point size; last repeat may clip', FLEXIBLE: 'integer repeats scaled to fit exactly — no clipping', CENTER: 'quadratic remap; detail bunches at both band ends', SNAP: 'reserved — currently behaves as STRETCH' };
+      return {
+        id, label, value, menuOpen: open,
+        tip: label + ' = ' + value + '  ·  ' + (fillDesc[value] || ''),
+        onClick: () => this.toggleFillMenu(id),
+        menuStyle: 'position:absolute;' + (alignRight ? 'right:0;' : 'left:0;') + 'min-width:120px;bottom:calc(100% + 6px);z-index:40;background:#1c1c24;border:1px solid #3a3a46;border-radius:7px;box-shadow:0 -12px 28px rgba(0,0,0,.5);padding:4px',
+        btnStyle: 'min-width:0;width:100%;display:flex;align-items:center;gap:5px;height:28px;padding:0 8px;border-radius:6px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:10px;border:1px solid ' + (open ? '#3a3358' : '#2a2a34') + ';background:' + (open ? 'rgba(140,124,246,.1)' : '#15151b') + ';color:#cfcfda',
+        caret: open ? '#8c7cf6' : '#6b6b7a',
+        items: modes.map(m => ({
+          mode: m, onSelect: () => this.setFill(id, m),
+          style: 'display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:5px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:' + (m === value ? '#c4bbff' : '#cfcfda') + ';background:' + (m === value ? 'rgba(140,124,246,.12)' : 'transparent'),
+        })),
+      };
+    });
+  }
+
+  buildFillSchematic() {
+    const E = React.createElement;
+    const s = this.state;
+    const map = { edgeX: ['Edge band · X', s.edgeFill[0]], edgeY: ['Edge band · Y', s.edgeFill[1]], centerX: ['Center spine · X', s.centerFill[0]], centerY: ['Center spine · Y', s.centerFill[1]] };
+    const [label, mode] = map[s.fillDemo] || map.edgeX;
+    const cell = (w, fill, extra) => E('div', { style: Object.assign({ height: 26, width: w, borderRadius: 3, background: fill, border: '1px solid rgba(255,255,255,.12)', flex: '0 0 auto' }, extra || {}) });
+    const stripe = 'repeating-linear-gradient(135deg,#6f5cf0 0 5px,#8c7cf6 5px 10px)';
+    let seg, note;
+    if (mode === 'STRETCH' || mode === 'SNAP') {
+      seg = E('div', { style: { display: 'flex', alignItems: 'center', gap: 0, height: 26, position: 'relative' } },
+        cell('100%', 'linear-gradient(90deg,#5a48d0,#9b8cff)'),
+        E('span', { style: { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: '#fff' } }, '↔ one cell stretched'));
+      note = mode === 'SNAP' ? 'SNAP is reserved — currently behaves as STRETCH.' : 'One source cell scaled to fill the band.';
+    } else if (mode === 'TILE') {
+      seg = E('div', { style: { display: 'flex', alignItems: 'center', gap: 3, height: 26, overflow: 'hidden' } },
+        ...Array.from({ length: 6 }).map((_, i) => cell(34, stripe)), cell(16, stripe, { opacity: .5 }));
+      note = 'Repeats at native point size — last repeat may clip.';
+    } else if (mode === 'FLEXIBLE') {
+      seg = E('div', { style: { display: 'flex', alignItems: 'center', gap: 3, height: 26 } },
+        ...Array.from({ length: 5 }).map((_, i) => cell('100%', stripe, { flex: 1 })));
+      note = 'Integer repeats scaled to fit exactly — no clipping.';
+    } else { // CENTER
+      seg = E('div', { style: { display: 'flex', alignItems: 'center', gap: 3, height: 26 } },
+        cell(40, stripe), cell('100%', 'rgba(140,124,246,.08)', { flex: 1, border: '1px dashed #3a3358' }), cell(40, stripe));
+      note = 'Quadratic remap — detail bunches at both band ends.';
+    }
+    return E('div', null,
+      E('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+        E('span', { style: { fontSize: 10, color: '#7a7a8a' } }, 'Fill behaviour'),
+        E('span', { style: { fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: '#c4bbff' } }, label + ' · ' + mode)),
+      seg,
+      E('div', { style: { fontSize: 9.5, color: '#5a5a68', marginTop: 5, lineHeight: 1.4 } }, note));
+  }
+
+  buildUVEditor() {
+    const E = React.createElement;
+    const s = this.state, u = s.uvShow;
+    const mono = "'JetBrains Mono',monospace";
+    // real Window_0 (pt): Expansion [32,20,32,20], Tessellation bands [32,64,32,64]
+    const wW = s.previewW, wH = s.previewH;
+    const expL = 32, expT = 20, expR = 32, expB = 20;
+    const bL = 32, bT = 64, bR = 32, bB = 64;
+    const texW = wW + expL + expR, texH = wH + expT + expB;
+    const P = (n, d) => +(n / d * 100).toFixed(2);
+    // widget-rect edges as % of the texture frame
+    const wx0 = P(expL, texW), wy0 = P(expT, texH), wx1 = 100 - P(expR, texW), wy1 = 100 - P(expB, texH);
+    // tessellation cut positions (band inset from widget rect)
+    const cxL = P(expL + bL, texW), cxR = 100 - P(expR + bR, texW);
+    const cyT = P(expT + bT, texH), cyB = 100 - P(expB + bB, texH);
+    const cx = (cxL + cxR) / 2, cy = (cyT + cyB) / 2;
+    const k = [];
+
+    // source artwork fills the whole texture frame (rod ends + shadow reach the edges)
+    k.push(E('img', { key:'img', src:'images/scroll_window.png', alt:'', style:{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'fill', opacity:0.95, pointerEvents:'none' } }));
+
+    // expansion gap — the chrome ring between the texture edge and the widget rect
+    if (u.expansion) {
+      const sh = 'rgba(230,173,77,.13)';
+      const eb = (key, st) => E('div', { key, style: Object.assign({ position:'absolute', background:sh, pointerEvents:'none' }, st) });
+      k.push(eb('et', { left:0, right:0, top:0, height: wy0 + '%' }));
+      k.push(eb('eb', { left:0, right:0, bottom:0, height: (100 - wy1) + '%' }));
+      k.push(eb('el', { left:0, top: wy0 + '%', bottom: (100 - wy1) + '%', width: wx0 + '%' }));
+      k.push(eb('er', { right:0, top: wy0 + '%', bottom: (100 - wy1) + '%', width: (100 - wx1) + '%' }));
+      const lbl = (key, txt, st) => E('span', { key, style: Object.assign({ position:'absolute', fontFamily:mono, fontSize:9, fontWeight:600, color:'#e6c98a', textShadow:'0 1px 3px #000', pointerEvents:'none' }, st) }, txt);
+      lbl && k.push(lbl('xl', '◀' + expL, { left:3, top:'calc(' + ((wy0 + wy1) / 2) + '% - 6px)' }));
+      k.push(lbl('xr', expR + '▶', { right:3, top:'calc(' + ((wy0 + wy1) / 2) + '% - 6px)' }));
+      k.push(lbl('xt', '▲' + expT, { top:2, left:'50%', transform:'translateX(-50%)' }));
+      k.push(lbl('xb', '▼' + expB, { bottom:2, left:'50%', transform:'translateX(-50%)' }));
+    }
+
+    // mask coverage hatch (over the widget rect)
+    if (u.mask) k.push(E('div', { key:'mask', style:{ position:'absolute', left: wx0 + '%', top: wy0 + '%', right: (100 - wx1) + '%', bottom: (100 - wy1) + '%', background:'repeating-linear-gradient(45deg,rgba(143,209,122,.20) 0 5px,transparent 5px 11px)', pointerEvents:'none' } }));
+
+    // the widget rect (layout rect) — what the engine lays out; chrome lives outside it
+    k.push(E('div', { key:'wbox', style:{ position:'absolute', left: wx0 + '%', top: wy0 + '%', right: (100 - wx1) + '%', bottom: (100 - wy1) + '%', border:'1.5px dashed #e6ad4d', borderRadius:2, pointerEvents:'none' } },
+      E('span', { style:{ position:'absolute', top:-7, left:6, fontFamily:mono, fontSize:9, color:'#e6c98a', background:'#0e0e13', padding:'0 4px' } }, 'widget rect ' + wW + '×' + wH)));
+
+    // tessellation cut lines + draggable handles
+    if (u.cuts) {
+      const vline = (key, x) => E('div', { key, style:{ position:'absolute', left: x + '%', top:0, bottom:0, width:0, borderLeft:'1.5px solid rgba(163,149,255,.9)', pointerEvents:'none' } });
+      const hline = (key, y) => E('div', { key, style:{ position:'absolute', top: y + '%', left:0, right:0, height:0, borderTop:'1.5px solid rgba(163,149,255,.9)', pointerEvents:'none' } });
+      k.push(vline('vl', cxL)); k.push(vline('vr', cxR));
+      k.push(hline('ht', cyT)); k.push(hline('hb', cyB));
+      const handle = (key, left, top, cur) => E('div', { key, title:'drag cut', style:{ position:'absolute', left, top, width:10, height:10, marginLeft:-5, marginTop:-5, background:'#a395ff', borderRadius:2, border:'1.5px solid #0e0e13', cursor:cur, boxShadow:'0 0 0 1px rgba(163,149,255,.4)', zIndex:5 } });
+      k.push(handle('hl', cxL + '%', '50%', 'ew-resize'));
+      k.push(handle('hr', cxR + '%', '50%', 'ew-resize'));
+      k.push(handle('htp', '50%', cyT + '%', 'ns-resize'));
+      k.push(handle('hbt', '50%', cyB + '%', 'ns-resize'));
+      // band-width labels
+      k.push(E('span', { key:'blL', style:{ position:'absolute', left:'calc(' + ((wx0 + cxL) / 2) + '% - 5px)', top:'calc(' + ((wy0 + wy1) / 2) + '% - 6px)', fontFamily:mono, fontSize:9, color:'#c4bbff', textShadow:'0 1px 2px #000', pointerEvents:'none' } }, String(bL)));
+      k.push(E('span', { key:'blT', style:{ position:'absolute', top:'calc(' + ((wy0 + cyT) / 2) + '% - 6px)', left:'50%', transform:'translateX(-50%)', fontFamily:mono, fontSize:9, color:'#c4bbff', textShadow:'0 1px 2px #000', pointerEvents:'none' } }, String(bT)));
+    }
+
+    // center tile (collapsed by default → degenerate spine, pruned)
+    if (u.center) {
+      k.push(E('div', { key:'ctv', style:{ position:'absolute', left: cx + '%', top: cyT + '%', bottom: (100 - cyB) + '%', width:0, borderLeft:'1px dashed #e6ad4d', opacity:.85, pointerEvents:'none' } }));
+      k.push(E('div', { key:'cth', style:{ position:'absolute', top: cy + '%', left: cxL + '%', right: (100 - cxR) + '%', height:0, borderTop:'1px dashed #e6ad4d', opacity:.85, pointerEvents:'none' } }));
+      k.push(E('span', { key:'ctl', style:{ position:'absolute', left: cx + '%', top: cy + '%', transform:'translate(-50%,-50%)', fontFamily:mono, fontSize:8.5, color:'#e6c98a', background:'rgba(14,14,19,.78)', padding:'1px 5px', borderRadius:3, pointerEvents:'none' } }, 'CenterTile · collapsed'));
+    }
+
+    // one source corner — mirrored ×4 by the engine
+    k.push(E('span', { key:'mir', style:{ position:'absolute', left:'calc(' + wx0 + '% + 3px)', top:'calc(' + wy0 + '% + 1px)', fontSize:13, color:'#8fd17a', textShadow:'0 1px 2px #000', pointerEvents:'none' } }, '◤'));
+
+    const frame = E('div', { key:'frame', style:{ position:'relative', width:'100%', maxWidth:520, aspectRatio: texW + ' / ' + texH, background:'repeating-conic-gradient(#17171d 0% 25%,#121217 0% 50%) 50%/14px 14px', border:'1px solid #2a2a34', borderRadius:5, boxShadow:'0 10px 34px rgba(0,0,0,.45)', flex:'0 0 auto' } }, ...k);
+
+    return E('div', { style:{ width:'100%', height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'18px 22px', boxSizing:'border-box', gap:13, overflow:'hidden' } },
+      frame,
+      E('div', { style:{ display:'flex', gap:16, flexWrap:'wrap', justifyContent:'center', fontFamily:mono, fontSize:10, color:'#6b6b7a' } },
+        E('span', null, E('span', { style:{ color:'#a395ff' } }, '▬ '), 'tessellation cut'),
+        E('span', null, E('span', { style:{ color:'#e6c98a' } }, '▭ '), 'widget rect · expansion = chrome ring'),
+        E('span', null, E('span', { style:{ color:'#8fd17a' } }, '◤ '), 'mirrored corner')));
+  }
+
+  buildBorderPreview() {
+    const s = this.state, z = s.zoom, p = s.pvShow;
+    const dispW = s.previewW * z, dispH = s.previewH * z;
+    // real Window_0 values (pt): Expansion [32,20,32,20], bands [32,64,32,64], Margin 8, Padding 4
+    const exp = { l: 32*z, t: 20*z, r: 32*z, b: 20*z };
+    const band = { l: 32*z, t: 64*z, r: 32*z, b: 64*z };
+    const mar = 8 * z, pad = 4 * z;
+    const E = React.createElement, mono = "'JetBrains Mono',monospace";
+    const kids = [];
+
+    // expansion chrome bleed — the drawn quad grows past the layout rect (rod ends, shadow)
+    if (p.chrome) kids.push(E('div', { key:'exp', style:{
+      position:'absolute', left:-exp.l, top:-exp.t, width: dispW + exp.l + exp.r, height: dispH + exp.t + exp.b,
+      border:'1px dashed #6a6a78', borderRadius:5, pointerEvents:'none',
+    } }, E('span', { style:{ position:'absolute', top:-9, left:8, fontSize:9, fontFamily:mono, color:'#8a8a9a', background:'#0e0e13', padding:'0 4px' } }, 'drawn quad · chrome bleed')));
+
+    // margin ring (outside the layout rect)
+    if (p.margin) kids.push(E('div', { key:'mar', style:{
+      position:'absolute', left:-mar, top:-mar, width: dispW + 2*mar, height: dispH + 2*mar,
+      background:'rgba(230,173,77,.08)', border:'1px solid rgba(230,173,77,.4)', borderRadius:3, pointerEvents:'none',
+    } }, E('span', { style:{ position:'absolute', top:1, left:4, fontSize:8, fontFamily:mono, color:'#caa05a' } }, 'margin 8')));
+
+    // the rendered widget (layout rect) — themed border art
+    const panelKids = [];
+    panelKids.push(E('img', { key:'img', src:'images/scroll_window.png', alt:'', style:{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'fill', pointerEvents:'none' } }));
+    panelKids.push(E('span', { key:'content', style:{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%,-50%)', fontFamily:mono, fontSize:10, color:'rgba(70,58,30,.65)', pointerEvents:'none' } }, 'content'));
+    const panel = E('div', { key:'panel', style:{ position:'relative', width:dispW, height:dispH }, }, ...panelKids);
+    kids.push(panel);
+
+    // padding box — content inset inside the border bands
+    if (p.padding) kids.push(E('div', { key:'pad', style:{
+      position:'absolute', left: band.l + pad, top: band.t + pad, width: dispW - band.l - band.r - 2*pad, height: dispH - band.t - band.b - 2*pad,
+      border:'1px dashed rgba(140,124,246,.7)', borderRadius:2, pointerEvents:'none',
+    } }, E('span', { style:{ position:'absolute', top:-8, left:3, fontSize:8, fontFamily:mono, color:'#a395ff', background:'rgba(14,14,19,.72)', padding:'0 3px' } }, 'padding 4')));
+
+    // minSize floor
+    if (p.minsize) {
+      const mw = 96 * z, mh = 72 * z;
+      kids.push(E('div', { key:'min', style:{ position:'absolute', left:'50%', top:'50%', marginLeft:-mw/2, marginTop:-mh/2, width:mw, height:mh, border:'1px dotted #e76461', borderRadius:2, pointerEvents:'none' } },
+        E('span', { style:{ position:'absolute', top:-9, left:0, fontSize:8, fontFamily:mono, color:'#e76461' } }, 'minSize 96×72')));
+    }
+
+    // resize handles
+    kids.push(E('div', { key:'rsz', onPointerDown:this.startResize, title:'Resize previewed panel', style:{ position:'absolute', right:-7, bottom:-7, width:16, height:16, borderRadius:4, background:'#8c7cf6', border:'2px solid #0e0e13', cursor:'nwse-resize', zIndex:6, boxShadow:'0 0 0 1px rgba(140,124,246,.5)' } }));
+    kids.push(E('div', { key:'rr', onPointerDown:this.startResize, style:{ position:'absolute', right:-5, top:'50%', marginTop:-7, width:8, height:14, borderRadius:3, background:'#6f5cf0', border:'2px solid #0e0e13', cursor:'ew-resize', zIndex:6 } }));
+    kids.push(E('div', { key:'rb', onPointerDown:this.startResize, style:{ position:'absolute', bottom:-5, left:'50%', marginLeft:-7, width:14, height:8, borderRadius:3, background:'#6f5cf0', border:'2px solid #0e0e13', cursor:'ns-resize', zIndex:6 } }));
+
+    return E('div', { style:{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center' } },
+      E('div', { style:{ position:'relative', width: dispW, height: dispH } }, ...kids));
+  }
+
+  buildBorderPins() {
+    const E = React.createElement;
+    const pins = [
+      [1, '50%', '9%', 'Expansion grows the drawn quad past the layout rect so out-of-box chrome (rod ends, drop shadow) isn\u2019t clipped. Layout & hit area unchanged.'],
+      [2, '22%', '50%', 'Tessellation bands (32/64). Draggable cut handles sit on the real band edges; numbers stay in sync.'],
+      [3, '50%', '50%', 'Center cut (dashed amber) is collapsed by default CenterTile [1,1,-1,-1] — degenerate, pruned by the driver.'],
+      [4, '78%', '78%', 'Resize handle — drag to resize the previewed panel; W×H is a gesture.'],
+      [5, '14%', '20%', 'One source corner (◤) mirrored to the other three (⤢) via cell_mask — never nine copies.'],
+    ];
+    const dot = (n, left, top) => E('div', { key:'p'+n, style:{ position:'absolute', left, top, transform:'translate(-50%,-50%)', width:20, height:20, borderRadius:'50%', background:'#8c7cf6', color:'#fff', fontSize:11, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,0,0,.5),0 0 0 2px rgba(140,124,246,.3)', animation:'annoPulse 2.4s ease-in-out infinite', fontFamily:"'IBM Plex Sans',sans-serif" } }, n);
+    const legend = E('div', { key:'legend', style:{ position:'absolute', right:14, top:14, width:250, background:'rgba(16,16,21,.94)', border:'1px solid #3a3358', borderRadius:9, padding:'11px 12px', pointerEvents:'auto', boxShadow:'0 12px 30px rgba(0,0,0,.5)' } },
+      E('div', { style:{ display:'flex', alignItems:'center', gap:7, marginBottom:9 } },
+        E('span', { style:{ width:15, height:15, borderRadius:'50%', background:'#8c7cf6', color:'#fff', fontSize:9, fontWeight:700, display:'inline-flex', alignItems:'center', justifyContent:'center' } }, 'i'),
+        E('span', { style:{ fontSize:11, fontWeight:700, color:'#e7e7ee', letterSpacing:'.04em' } }, 'BORDERS — redesign goals')),
+      ...pins.map(([n,,,txt]) => E('div', { key:'l'+n, style:{ display:'flex', gap:8, marginBottom:7 } },
+        E('span', { style:{ flex:'0 0 auto', width:16, height:16, borderRadius:'50%', background:'rgba(140,124,246,.18)', color:'#c4bbff', fontSize:10, fontWeight:700, display:'inline-flex', alignItems:'center', justifyContent:'center', fontFamily:"'JetBrains Mono',monospace" } }, n),
+        E('span', { style:{ fontSize:11, lineHeight:1.4, color:'#a6a6b6' } }, txt))));
+    return E('div', { style:{ position:'absolute', inset:0 } }, ...pins.map(([n,left,top]) => dot(n, left, top)));
+  }
+
+  borderLegendItems() {
+    return [
+      ['1', 'Always a 5×5 patch: positions = [0, L, 0.5+cx0, 0.5+cx1, 1−R, 1] per axis (Tessellation + CenterTile).'],
+      ['2', 'Fix() collapses crossed/center bands to zero area → driver prunes them → effective 3×3 (default) or 2×2.'],
+      ['3', 'One source corner mirrored ×4 via cell_mask / negative-rampUV — the preview must never draw nine copies.'],
+      ['4', 'Bands + cut handles are draggable; numeric fields stay in sync. Drag ↘ resizes the panel.'],
+      ['5', 'Artwork shown is the raw sheet (reference only). Engine-accurate slice + mask lands with the WebGL2 build.'],
+    ].map(([n, text]) => ({ n, text }));
+  }
+  buildBgTables() {
+    const cur = this.state.selBgTable;
+    const items = [['backdrops','Backdrops','5',false],['lights','Lights','9',false],['texcoords','TexCoords','5',true],['gradients','Gradients','4',true]];
+    return items.map(([key,label,count,shared]) => {
+      const on = cur === key;
+      return { label, count, shared, onClick: () => this.setState({ selBgTable: key }),
+        style: 'display:flex;align-items:center;gap:7px;width:100%;height:32px;padding:0 10px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:'+(on?'600':'500')+';border:1px solid '+(on?'#3a3358':'transparent')+';background:'+(on?'rgba(140,124,246,.13)':'transparent')+';color:'+(on?'#e7e7ee':'#b6b6c4') };
+    });
+  }
+
+  buildBgEntries() {
+    const t = this.state.selBgTable;
+    const sets = {
+      backdrops: [['Backdrop_0',2,false,false],['Panel_0_0',0,false,true],['Progress_0',1,false,false],['Affordance_0',0,false,false],['Decoration_0',1,false,false]],
+      lights: [['White',0,false,false],['Header_0_0',0,false,true],['Panel_0_1',0,false,false],['Backdrop_0_1',0,false,false],['Progess_0_0',0,true,false],['GridItem_0',0,true,false]],
+      texcoords: [['scroll_slow',3,false,false],['spin_dial',1,false,false],['noise_uv',2,false,false],['drift_warn',1,false,true],['dead_uv',0,true,false]],
+      gradients: [['dusk',4,false,true],['steel',2,false,false],['glass_tint',1,false,false],['aurora_dead',0,true,false]],
+    };
+    const swatchFor = (name) => {
+      if (t === 'gradients') return 'background:linear-gradient(90deg,#6f5cf0,#e6ad4d);';
+      if (t === 'texcoords') return "background:repeating-conic-gradient(#23232c 0% 25%,#1a1a22 0% 50%) 50%/6px 6px;";
+      return 'background:#1c1c24;border:1px solid #2a2a34;';
+    };
+    return sets[t].map(([name,refs,dead,warn]) => ({
+      name, refs: String(refs), dead, warn, hasRefs: refs > 0 && !dead, swatch: swatchFor(name),
+      onClick: () => this.setState({ selBg: name }),
+      rowStyle: 'display:flex;align-items:center;gap:8px;width:100%;height:34px;padding:0 8px;margin-bottom:2px;border-radius:7px;cursor:pointer;font-family:inherit;border:1px solid transparent;background:transparent;color:'+(dead?'#7a7a8a':'#b6b6c4'),
+    }));
+  }
+
+  buildGradientEditor() {
+    const E = React.createElement;
+    const stops = [[0,'#241b3a'],[0.4,'#6f5cf0'],[0.72,'#e6ad4d'],[1,'#f4e7c8']];
+    const css = 'linear-gradient(90deg,' + stops.map(([t,c]) => c+' '+(t*100)+'%').join(',') + ')';
+    return E('div', null,
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,marginBottom:12 } },
+        E('span', { style:{ fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#8a8a9a',textTransform:'uppercase' } }, 'Gradient stop editor'),
+        E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#5a5a68' } }, 'dusk · marks [t,[r,g,b,a]], t ascending 0..1')),
+      // gradient bar with draggable stops
+      E('div', { style:{ position:'relative',height:46,borderRadius:8,background:css,border:'1px solid #2a2a34',marginBottom:6,backgroundImage:css+',repeating-conic-gradient(#33333c 0% 25%,#26262e 0% 50%)',backgroundSize:'100% 100%,12px 12px' } },
+        ...stops.map(([t,c],i) => E('div', { key:i, title:'drag stop', style:{ position:'absolute',left:(t*100)+'%',top:-6,transform:'translateX(-50%)',width:14,height:58,display:'flex',flexDirection:'column',alignItems:'center',cursor:'ew-resize' } },
+          E('div', { style:{ width:14,height:14,borderRadius:'50%',background:c,border:'2px solid #e7e7ee',boxShadow:'0 1px 4px rgba(0,0,0,.6)' } }),
+          E('div', { style:{ flex:1,width:2,background:'rgba(255,255,255,.5)' } })))),
+      E('div', { style:{ display:'flex',justifyContent:'space-between',fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'#5a5a68',marginBottom:14 } }, E('span',null,'0.0'), E('span',null,'1.0')),
+      // stop list
+      E('div', { style:{ display:'flex',flexDirection:'column',gap:6 } },
+        ...stops.map(([t,c],i) => E('div', { key:i, style:{ display:'flex',alignItems:'center',gap:10,padding:'7px 10px',borderRadius:7,border:'1px solid #2a2a34',background:'#15151b' } },
+          E('span', { style:{ width:18,height:18,borderRadius:4,background:c,border:'1px solid rgba(255,255,255,.2)' } }),
+          E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#9b9bab',width:54 } }, 't '+t.toFixed(2)),
+          E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#cfcfda',flex:1 } }, c.toUpperCase()),
+          E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#6b6b7a' } }, 'a 1.0'))),
+        E('button', { style:{ marginTop:4,alignSelf:'flex-start',fontSize:11,color:'#8c7cf6',background:'none',border:'none',cursor:'pointer',fontFamily:'inherit' } }, '+ add stop')));
+  }
+
+  buildTexcoordEditor() {
+    const E = React.createElement;
+    const fields = [['normalization','0'],['spinSpeed','0.0'],['scrollFactor','[0.1, 0]'],['scaleFactor','[1, 1]'],['rotationCenter','[0.5, 0.5]'],['initialTime','0']];
+    return E('div', null,
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,marginBottom:12 } },
+        E('span', { style:{ fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#8a8a9a',textTransform:'uppercase' } }, 'TexCoord editor'),
+        E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#5a5a68' } }, 'UV transform / animation')),
+      // animation scrub
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,marginBottom:14,padding:'10px 12px',borderRadius:8,border:'1px solid #2a2a34',background:'#15151b' } },
+        E('button', { onClick:()=>this.setState({}), style:{ width:30,height:30,borderRadius:7,border:'none',background:'#6f5cf0',color:'#fff',cursor:'pointer',fontSize:13 } }, '▶'),
+        E('div', { style:{ flex:1,position:'relative',height:6,borderRadius:3,background:'#1c1c24' } },
+          E('div', { style:{ position:'absolute',left:0,top:0,bottom:0,width:'32%',borderRadius:3,background:'#6f5cf0' } }),
+          E('div', { style:{ position:'absolute',left:'32%',top:'50%',transform:'translate(-50%,-50%)',width:14,height:14,borderRadius:'50%',background:'#8c7cf6',border:'2px solid #0e0e13' } })),
+        E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#9b9bab' } }, '0.32s')),
+      E('div', { style:{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 12px' } },
+        ...fields.map(([k,v],i) => E('div', { key:i },
+          E('div', { style:{ fontSize:10,color:'#7a7a8a',marginBottom:4 } }, k),
+          E('div', { style:{ height:28,borderRadius:6,border:'1px solid #2a2a34',background:'#0e0e13',display:'flex',alignItems:'center',padding:'0 9px',fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#d6d6e0' } }, v)))),
+      E('div', { style:{ display:'flex',alignItems:'flex-start',gap:7,marginTop:14,padding:'8px 10px',borderRadius:7,background:'rgba(230,173,77,.08)',border:'1px solid #4a3a2a' } },
+        E('span', { style:{ color:'#e6ad4d' } }, '▲'),
+        E('span', { style:{ fontSize:10,color:'#d8b97a',lineHeight:1.5 } }, React.createElement(React.Fragment,null,'timeFactor pinned to ', E('span',{style:{fontFamily:"'JetBrains Mono',monospace"}},'0'),' — nonzero values misbehave (shader int/float bug). Editor warns on any change.'))));
+  }
+
+  buildCompositeStack() {
+    const E = React.createElement;
+    const isLight = this.state.selBgTable === 'lights';
+    const layers = isLight
+      ? [['Light sweep','gradient “dusk” · mode Sine · radial 0.35','linear-gradient(90deg,#6f5cf0,#e6ad4d)'],['TexCoord','reuses layer index when omitted','#1c1c24']]
+      : [['Detail Layer 1','textures/fabric.png · texCoord scroll_fast','repeating-linear-gradient(135deg,#2a2436 0 7px,#211c2e 7px 14px)'],['Detail Layer 0','#HURL_NOISE · texCoord noise_uv','repeating-conic-gradient(#2a2a33 0% 25%,#1f1f27 0% 50%)'],['Frosted Glass','blur 1.0 · zoom 1.2 · opacity 0.6','linear-gradient(135deg,rgba(140,124,246,.3),rgba(20,18,34,.4))']];
+    return E('div', null,
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,marginBottom:12 } },
+        E('span', { style:{ fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#8a8a9a',textTransform:'uppercase' } }, 'Composite stack'),
+        E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#5a5a68' } }, 'top composites over bottom')),
+      ...layers.map(([name,sub,bg],i) => E('div', { key:i, style:{ display:'flex',alignItems:'center',gap:11,padding:'10px 12px',marginBottom:7,borderRadius:8,border:'1px solid #2a2a34',background:'#15151b' } },
+        E('span', { style:{ width:44,height:30,borderRadius:5,background:bg,border:'1px solid #2a2a34',flex:'0 0 auto' } }),
+        E('div', { style:{ flex:1,minWidth:0 } },
+          E('div', { style:{ fontSize:12,fontWeight:600,color:'#e7e7ee' } }, name),
+          E('div', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#7a7a8a',marginTop:2 } }, sub)),
+        E('span', { style:{ color:'#5a5a68',cursor:'grab',fontSize:14 } }, '⠿'))));
+  }
+  scrubTrack = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const set = (cx) => this.setState({ scrub: Math.min(1, Math.max(0, (cx - rect.left) / rect.width)) });
+    set(e.clientX);
+    const move = (ev) => set(ev.clientX);
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  };
+
+  widgetStyle() {
+    const k = Math.sin(this.state.scrub * Math.PI);
+    const scale = (1 + 0.16 * k).toFixed(3);
+    const ty = (-10 * k).toFixed(1);
+    const glow = (0.3 + 0.6 * k).toFixed(2);
+    return 'display:flex;align-items:center;justify-content:center;padding:14px 28px;border-radius:11px;background:linear-gradient(135deg,#9b8cff,#6f5cf0);transform:translateY(' + ty + 'px) scale(' + scale + ');box-shadow:0 ' + (8 + 12 * k).toFixed(0) + 'px ' + (18 + 24 * k).toFixed(0) + 'px rgba(111,92,240,' + glow + ');transition:transform .04s linear';
+  }
+
+  buildRcTables() {
+    const cur = this.state.selCurveTable || 'curves';
+    const items = [['curves','Response Curves','9',false],['events','Events','7',true],['spline1d','1D Splines','5',false],['spline2d','2D Splines','3',false],['gradients','Gradients','4',true],['sounds','Sound Effects','3',false]];
+    return items.map(([key,label,count,shared]) => {
+      const on = cur === key;
+      return { label, count, shared, onClick: () => this.setState({ selCurveTable: key }),
+        style: 'display:flex;align-items:center;gap:7px;width:100%;height:32px;padding:0 10px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:'+(on?'600':'500')+';border:1px solid '+(on?'#3a3358':'transparent')+';background:'+(on?'rgba(140,124,246,.13)':'transparent')+';color:'+(on?'#e7e7ee':'#b6b6c4') };
+    });
+  }
+
+  buildRcEntries() {
+    const t = this.state.selCurveTable || 'curves';
+    const sets = {
+      curves: [['Button_0',0,false,false],['GridItem_0',0,false,false],['ListItem_0',0,false,false],['Action_0',0,false,false],['Toggle_0',0,false,false],['Progress_0',0,false,false]],
+      events: [['hover_pop',3,false,false],['click_press',4,false,false],['toggle_glow',2,false,false],['idle_breathe',1,false,false],['hover_settle',1,false,false],['press_flash',0,true,false],['glow_loop',0,true,false]],
+      spline1d: [['rot_wobble',2,false,false],['ease_pop',3,false,false],['style_boost',1,false,false],['fade_in',1,false,false],['bad_order',1,false,true]],
+      spline2d: [['pop_translate',2,false,false],['press_scale',1,false,false],['drift',1,false,false]],
+      gradients: [['tint_hover',3,false,false],['glow_cycle',1,false,false],['font_focus',1,false,false],['tint_dead',0,true,false]],
+      sounds: [['click_soft',2,false,false],['hover_tick',1,false,false],['toggle_clack',0,true,false]],
+    };
+    const sw = (name) => {
+      if (t === 'gradients') return 'background:linear-gradient(90deg,#6f5cf0,#e6ad4d);';
+      if (t === 'sounds') return 'background:#1c1c24;border:1px solid #2a2a34;';
+      if (t === 'curves') return 'background:rgba(140,124,246,.14);border:1px solid #3a3358;';
+      return 'background:#1c1c24;border:1px solid #2a2a34;';
+    };
+    const cur = t === 'events' ? this.state.selEvent : null;
+    return sets[t].map(([name,refs,dead,warn]) => ({
+      name, refs: String(refs), dead, warn, hasRefs: refs > 0 && !dead, swatch: sw(name),
+      onClick: () => t === 'events' ? this.setState({ selEvent: name }) : this.setState({ selCurve: name }),
+      rowStyle: 'display:flex;align-items:center;gap:8px;width:100%;height:34px;padding:0 8px;margin-bottom:2px;border-radius:7px;cursor:pointer;font-family:inherit;border:1px solid '+(cur===name?'#3a3358':'transparent')+';background:'+(cur===name?'rgba(140,124,246,.13)':'transparent')+';color:'+(dead?'#7a7a8a':'#b6b6c4'),
+    }));
+  }
+
+  buildRcTriggers() {
+    const cur = this.state.playState;
+    const items = ['OnHoverBegin','OnClick','OnToggled','BaselineLoop','OnHoverEnd'];
+    return items.map(label => {
+      const on = cur === label;
+      return { label, onClick: () => this.setState({ playState: label, scrub: 0 }),
+        style: 'height:26px;padding:0 11px;border-radius:7px;font-family:\'JetBrains Mono\',monospace;font-size:11px;cursor:pointer;border:1px solid '+(on?'#3a3358':'#2a2a34')+';background:'+(on?'rgba(140,124,246,.14)':'#1c1c24')+';color:'+(on?'#c4bbff':'#8a8a9a') };
+    });
+  }
+
+  pickerStyle(kind) {
+    const base = 'flex:1;display:flex;align-items:center;gap:6px;height:28px;padding:0 9px;border-radius:6px;font-family:\'JetBrains Mono\',monospace;font-size:11px;cursor:pointer;border:1px solid ';
+    if (kind === 'bad') return base + '#e76461;background:rgba(231,100,97,.08);color:#e76461';
+    if (kind === 'empty') return base + '#2a2a34;background:#15151b;color:#6b6b7a';
+    return base + '#3a3358;background:rgba(140,124,246,.08);color:#c4bbff';
+  }
+  gotoStyle(on) { return 'width:28px;height:28px;flex:0 0 auto;border-radius:6px;border:1px solid #2a2a34;background:#1c1c24;cursor:pointer;font-size:12px;color:' + (on ? '#8c7cf6' : '#5a5a68'); }
+  caretFor(kind) { return kind === 'bad' ? 'color:#e76461' : (kind === 'empty' ? 'color:#6b6b7a' : 'color:#8c7cf6'); }
+
+  buildRcWiring() {
+    const rows = [
+      ['HoveringState','hover_glow','on'],['ToggledState','— none —','empty'],['BaselineLoop','idle_breathe','on'],
+      ['OnHoverBegin','hover_pop','on'],['OnHoverEnd','hover_settle','on'],['OnClick','click_pres','bad'],
+      ['OnDoubleClick','— none —','empty'],['OnToggled','toggle_glow','on'],
+    ];
+    return rows.map(([state,value,kind]) => ({ state, value, pickerStyle: this.pickerStyle(kind), caret: this.caretFor(kind), gotoStyle: this.gotoStyle(kind === 'on') }));
+  }
+
+  buildRcChannels() {
+    const rows = [
+      ['Translation','2D Spline','pop_translate','on'],['Rotation','1D Spline','rot_wobble','on'],
+      ['Scaling','2D Spline','press_scale','on'],['Style','1D Spline','— none —','empty'],
+      ['Tint','Gradient','tint_hover','on'],['Font Color','Gradient','— none —','empty'],
+      ['Sound Effect','Sound','click_soft','on'],
+    ];
+    return rows.map(([label,target,value,kind]) => ({ label, target, value, pickerStyle: this.pickerStyle(kind), caret: this.caretFor(kind),
+      spark: 'flex:0 0 auto;width:34px;height:6px;border-radius:3px;background:' + (kind === 'on' ? 'linear-gradient(90deg,#6f5cf0,#8c7cf6)' : '#1c1c24') }));
+  }
+
+  buildSplineEditor() {
+    const E = React.createElement;
+    const W = 320, H = 130, pad = 16;
+    const marks = [[0,0.2],[0.25,0.95],[0.55,0.6],[0.8,0.85],[1,0.5]];
+    const px = (t) => pad + t * (W - 2*pad);
+    const py = (v) => H - pad - v * (H - 2*pad);
+    let d = '';
+    marks.forEach(([t,v],i) => { d += (i ? ' L ' : 'M ') + px(t).toFixed(1) + ' ' + py(v).toFixed(1); });
+    return E('div', null,
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,marginBottom:12 } },
+        E('span', { style:{ fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#8a8a9a',textTransform:'uppercase' } }, 'Spline editor · ease_pop'),
+        E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#5a5a68' } }, '1D · marks [t, v], t strictly ascending')),
+      E('div', { style:{ position:'relative',borderRadius:9,border:'1px solid #2a2a34',background:'#0e0e13',padding:'8px' } },
+        E('svg', { viewBox:'0 0 '+W+' '+H, style:{ width:'100%',height:H,display:'block' } },
+          [0.25,0.5,0.75].map((g,i)=>E('line',{key:'g'+i,x1:px(g),y1:pad,x2:px(g),y2:H-pad,stroke:'#1c1c24',strokeWidth:1})),
+          E('line',{x1:pad,y1:H-pad,x2:W-pad,y2:H-pad,stroke:'#2a2a34',strokeWidth:1}),
+          E('path',{d:d,fill:'none',stroke:'#8c7cf6',strokeWidth:2}),
+          // playhead from scrub
+          E('line',{x1:px(this.state.scrub),y1:pad-2,x2:px(this.state.scrub),y2:H-pad,stroke:'#e6ad4d',strokeWidth:1.5,strokeDasharray:'3 2'}),
+          marks.map(([t,v],i)=>E('circle',{key:'m'+i,cx:px(t),cy:py(v),r:5,fill:'#a395ff',stroke:'#0e0e13',strokeWidth:2,style:{cursor:'grab'}}))),
+      ),
+      E('div', { style:{ display:'flex',justifyContent:'space-between',fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'#5a5a68',margin:'4px 4px 12px' } }, E('span',null,'0.00s'), E('span',null,'0.60s')),
+      E('div', { style:{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:7,background:'rgba(92,187,133,.08)',border:'1px solid #2a4a36' } },
+        E('span',{style:{color:'#5cbb85'}},'✓'),
+        E('span',{style:{fontSize:10,color:'#7fcaa0'}},'5 marks strictly ascending in t. One-shot — clamps at last mark; state events loop.')));
+  }
+
+  buildCurveGradient() {
+    const E = React.createElement;
+    const stops = [[0,'#1a1430'],[0.3,'#6f5cf0'],[0.55,'#ffffff'],[0.8,'#e6ad4d'],[1,'#241b3a']];
+    const css = 'linear-gradient(90deg,' + stops.map(([t,c])=>c+' '+(t*100)+'%').join(',') + ')';
+    return E('div', null,
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,marginBottom:12 } },
+        E('span', { style:{ fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#8a8a9a',textTransform:'uppercase' } }, 'Gradient over time · glow_cycle'),
+        E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#5a5a68' } }, 'Tint / Font Color · RGBA over t')),
+      E('div', { style:{ position:'relative',height:46,borderRadius:8,border:'1px solid #2a2a34',background:css,marginBottom:6 } },
+        ...stops.map(([t,c],i)=>E('div',{key:i,title:'drag',style:{position:'absolute',left:(t*100)+'%',top:-6,transform:'translateX(-50%)',width:13,height:58,display:'flex',flexDirection:'column',alignItems:'center',cursor:'ew-resize'}},
+          E('div',{style:{width:13,height:13,borderRadius:'50%',background:c,border:'2px solid #e7e7ee',boxShadow:'0 1px 4px rgba(0,0,0,.6)'}}),
+          E('div',{style:{flex:1,width:2,background:'rgba(255,255,255,.5)'}})))),
+      E('div', { style:{ display:'flex',justifyContent:'space-between',fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'#5a5a68',marginBottom:12 } }, E('span',null,'t 0.00'), E('span',null,'loops')),
+      E('div', { style:{ display:'flex',alignItems:'center',gap:7,padding:'8px 10px',borderRadius:7,background:'rgba(230,173,77,.08)',border:'1px solid #4a3a2a' } },
+        E('span',{style:{color:'#e6ad4d'}},'☀'),
+        E('span',{style:{fontSize:10,color:'#d8b97a'}},'HDR allowed — the white stop packs at value 1.6 for a glow boost. Values may exceed 1.')));
+  }
+
+  buildSoundEditor() {
+    const E = React.createElement;
+    const ranges = [['tone','0.9','1.1'],['speed','0.95','1.05'],['volume','0.7','1.0']];
+    return E('div', null,
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,marginBottom:12 } },
+        E('span', { style:{ fontSize:11,fontWeight:700,letterSpacing:'.06em',color:'#8a8a9a',textTransform:'uppercase' } }, 'Sound effect · click_soft'),
+        E('span', { style:{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#5a5a68' } }, 'randomized per play')),
+      E('div', { style:{ display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:8,border:'1px solid #2a2a34',background:'#15151b',marginBottom:14 } },
+        E('button',{style:{width:30,height:30,borderRadius:7,border:'none',background:'#6f5cf0',color:'#fff',cursor:'pointer',fontSize:13,flex:'0 0 auto'}},'▶'),
+        E('div',{style:{flex:1,height:30,display:'flex',alignItems:'center',gap:2,overflow:'hidden'}},
+          ...Array.from({length:48}).map((_,i)=>E('div',{key:i,style:{flex:1,height:(20+18*Math.abs(Math.sin(i*0.7)))+'%',background:'#3a3358',borderRadius:1}}))),
+        E('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#8fd17a',flex:'0 0 auto'}},'sfx/click.ogg')),
+      ...ranges.map(([k,a,b],i)=>E('div',{key:i,style:{marginBottom:13}},
+        E('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
+          E('span',{style:{fontSize:11,color:'#9b9bab'}},k),
+          E('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#cfcfda'}},'['+a+', '+b+']')),
+        E('div',{style:{position:'relative',height:6,borderRadius:3,background:'#1c1c24'}},
+          E('div',{style:{position:'absolute',left:'30%',right:'18%',top:0,bottom:0,borderRadius:3,background:'#6f5cf0'}}),
+          E('div',{style:{position:'absolute',left:'30%',top:'50%',transform:'translate(-50%,-50%)',width:13,height:13,borderRadius:'50%',background:'#8c7cf6',border:'2px solid #0e0e13'}}),
+          E('div',{style:{position:'absolute',left:'82%',top:'50%',transform:'translate(-50%,-50%)',width:13,height:13,borderRadius:'50%',background:'#8c7cf6',border:'2px solid #0e0e13'}})))));
+  }
+
+  buildRcInspector() {
+    const E = React.createElement;
+    const t = this.state.selCurveTable || 'curves';
+    const head = (kicker, name) => E('div', null,
+      E('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'.08em',color:'#5a5a68',marginBottom:6}},kicker),
+      E('div',{style:{display:'flex',alignItems:'center',height:34,padding:'0 11px',borderRadius:7,border:'1px solid #2a2a34',background:'#15151b',fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:600,color:'#e7e7ee'}},name));
+    const refList = (label, items) => E('div',{style:{marginTop:16}},
+      E('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'.08em',color:'#5a5a68',marginBottom:8}},label),
+      E('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+        ...items.map((it,i)=>E('div',{key:i,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderRadius:7,border:'1px solid #2a2a34',background:'#15151b',cursor:'pointer'}},
+          E('span',{style:{fontSize:11,color:'#7a7a8a'}},it[0]+' ›'),
+          E('span',{style:{flex:1,fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#cfcfda'}},it[1]),
+          E('span',{style:{color:'#8c7cf6',fontSize:12}},'↗')))));
+    const okBox = (txt) => E('div',{style:{marginTop:14,display:'flex',gap:7,padding:'8px 10px',borderRadius:7,background:'rgba(92,187,133,.08)',border:'1px solid #2a4a36'}},E('span',{style:{color:'#5cbb85'}},'✓'),E('span',{style:{fontSize:10,color:'#7fcaa0',lineHeight:1.5}},txt));
+
+    if (t === 'events') return E('div',null, head('EVENT · shared · free-form','hover_pop'),
+      E('div',{style:{marginTop:12,fontSize:10,color:'#5a5a68',lineHeight:1.5}},'Bundles channel curves. Packed only when a Response Curve references it.'),
+      refList('REFERENCED BY · 3 consumers', [['Curve','Button_0 · OnHoverBegin'],['Curve','GridItem_0 · OnHoverBegin'],['Curve','Action_0 · HoveringState']]));
+    if (t === 'spline1d' || t === 'spline2d') return E('div',null, head('SPLINE · shared · free-form','ease_pop'),
+      okBox('Marks strictly ascending in t. One-shots clamp; state loops resample.'),
+      refList('REFERENCED BY · 3 channels', [['Event','hover_pop · Translation'],['Event','click_press · Scaling'],['Event','idle_breathe · Style']]));
+    if (t === 'gradients') return E('div',null, head('GRADIENT · shared · free-form','tint_hover'),
+      E('div',{style:{marginTop:12,fontSize:10,color:'#5a5a68',lineHeight:1.5}},'RGBA over time. Separate namespace from backgrounds.json Gradients. HDR (>1) allowed.'),
+      refList('REFERENCED BY · 3 channels', [['Event','hover_pop · Tint'],['Event','toggle_glow · Tint'],['Event','hover_settle · Font Color']]));
+    if (t === 'sounds') return E('div',null, head('SOUND EFFECT · free-form','click_soft'),
+      okBox('sfx/click.ogg exists · .ogg accepted (ogg/wav/flac).'),
+      refList('REFERENCED BY · 2 channels', [['Event','click_press · Sound Effect'],['Event','hover_pop · Sound Effect']]));
+    // curves / archetype
+    return E('div',null, head('ARCHETYPE · Response Curve enum','Button_0'),
+      E('div',{style:{marginTop:12,fontSize:10,color:'#5a5a68',lineHeight:1.5}},'Maps states & input signals to Events. A mistyped Event name is silently ignored — every value is a picker.'),
+      E('div',{style:{marginTop:16,display:'flex',gap:7,padding:'8px 10px',borderRadius:7,background:'rgba(231,100,97,.08)',border:'1px solid #5a2a2a'}},
+        E('span',{style:{color:'#e76461'}},'✕'),
+        E('span',{style:{fontSize:10,color:'#e89b99',lineHeight:1.5}},React.createElement(React.Fragment,null,'OnClick → ',E('span',{style:{fontFamily:"'JetBrains Mono',monospace"}},'click_pres'),' is dangling (no such Event). ',E('span',{style:{color:'#c4bbff',textDecoration:'underline',cursor:'pointer'}},'did you mean click_press?')))),
+      refList('WIRES · 6 events', [['','HoveringState → hover_glow'],['','OnHoverBegin → hover_pop'],['','OnToggled → toggle_glow']]));
+  }
+  modeBtn(m) {
+    const on = this.state.codingMode === m;
+    return 'height:24px;padding:0 14px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;background:' + (on ? 'rgba(140,124,246,.2)' : 'transparent') + ';color:' + (on ? '#c4bbff' : '#8a8a9a');
+  }
+
+  codingDefaults() {
+    return { Background:'#15151b', Text:'#c8c8d2', LineNumber:'#4a4a58', SideBar:'#101015', ScrollBar:'#3a3a46',
+      ModifiedLines:'#5c8fdb', SavedLines:'#5cbb85', Error:'#e76461', Warnings:'#e6ad4d', Line:'rgba(255,255,255,.04)',
+      Comment:'#6b7280', Integer:'#e6b86b', String:'#8fd17a', Keyword:'#b08cf0', Builtin_Type:'#6fb6e8',
+      Keyword_TypeModifier:'#a07be0', Builtin_Function:'#e88fb0', Preprocessor:'#9aa0b0' };
+  }
+
+  buildCodingRoles() {
+    const order = ['Background','Text','Line','LineNumber','SideBar','ScrollBar','ModifiedLines','SavedLines','Error','Warnings','Comment','Keyword','Keyword_TypeModifier','Builtin_Type','Builtin_Function','Integer','String','Preprocessor'];
+    const theme = this.state.themes[this.state.codingMode];
+    return order.map(role => {
+      const v = theme[role];
+      const isSet = !!v;
+      const hex = isSet ? v[0] : '#888aa0';
+      const alphaOn = isSet ? v[1] : true;
+      return {
+        role, isSet, unset: !isSet, hex,
+        nameColor: isSet ? '#cfcfda' : '#6b6b7a',
+        swatchBg: 'background:' + hex,
+        onColor: (e) => this.setRoleColor(role, e.target.value),
+        onToggleAlpha: () => this.toggleRoleAlpha(role),
+        onEnable: () => this.enableRole(role),
+        alphaStyle: 'width:23px;height:23px;flex:0 0 auto;border-radius:5px;cursor:pointer;font-size:11px;border:1px solid ' + (alphaOn ? '#3a3358' : '#2a2a34') + ';background:' + (alphaOn ? 'rgba(140,124,246,.18)' : '#15151b') + ';color:' + (alphaOn ? '#c4bbff' : '#5a5a68') + (alphaOn ? '' : ';text-decoration:line-through'),
+        rowStyle: 'display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px',
+      };
+    });
+  }
+
+  buildCodeSample() {
+    const E = React.createElement;
+    const theme = this.state.themes[this.state.codingMode];
+    const DEF = this.codingDefaults();
+    const col = (role) => { const v = theme[role]; return v ? v[0] : DEF[role]; };
+    const T = (text, role, extra) => E('span', { style: Object.assign({ color: role ? col(role) : col('Text') }, extra || {}) }, text);
+    // [tokens, gutterMark]
+    const lines = [
+      [[['#include ', 'Preprocessor'], ['<gui/border.h>', 'String']], null],
+      [[['', null]], null],
+      [[['// Slice the source sheet into a 3×3 nine-patch', 'Comment']], null],
+      [[['constexpr ', 'Keyword'], ['int', 'Builtin_Type'], [' kMaxCells = ', null], ['25', 'Integer'], [';', null]], 'mod'],
+      [[['', null]], null],
+      [[['Border', 'Builtin_Type'], [' ', null], ['makeWindow', 'Builtin_Function'], ['(', null], ['Image', 'Builtin_Type'], ['& sheet) {', null]], null],
+      [[['  const ', 'Keyword_TypeModifier'], ['auto', 'Keyword'], [' cells = sheet.', null], ['slice', 'Builtin_Function'], ['(', null], ['3', 'Integer'], [', ', null], ['3', 'Integer'], [');', null]], 'saved'],
+      [[['  if', 'Keyword'], [' (cells.', null], ['emty', 'Builtin_Function', { textDecoration: 'underline wavy', textDecorationColor: col('Warnings'), textUnderlineOffset: '3px' }], ['()) ', null], ['return', 'Keyword'], [' {};', null]], null],
+      [[['  return', 'Keyword'], [' ', null], ['Border', 'Builtin_Type'], ['{ cells, kMaxCells };', null]], 'mod'],
+      [[['}', null]], null],
+    ];
+    const rows = lines.map((ln, i) => {
+      const [toks, mark] = ln;
+      const markColor = mark === 'mod' ? col('ModifiedLines') : mark === 'saved' ? col('SavedLines') : 'transparent';
+      const isCur = i === 6;
+      return E('div', { key: i, style: { display: 'flex', alignItems: 'stretch', background: isCur ? col('Line') : 'transparent', minHeight: 22 } },
+        // gutter
+        E('div', { style: { display: 'flex', alignItems: 'center', flex: '0 0 auto', background: col('SideBar') } },
+          E('div', { style: { width: 3, alignSelf: 'stretch', background: markColor } }),
+          E('span', { style: { width: 34, textAlign: 'right', padding: '0 9px 0 7px', color: col('LineNumber'), fontSize: 12.5 } }, i + 1)),
+        // code
+        E('div', { style: { flex: 1, padding: '0 14px', whiteSpace: 'pre', display: 'flex', alignItems: 'center' } },
+          ...toks.map(([txt, role, extra], j) => T(txt, role, extra)))
+      );
+    });
+    return E('div', { style: { display: 'flex', borderRadius: 10, overflow: 'hidden', border: '1px solid #2a2a34', background: col('Background'), fontFamily: "'JetBrains Mono',monospace", fontSize: 13, lineHeight: 1.7, boxShadow: '0 8px 30px rgba(0,0,0,.35)' } },
+      E('div', { style: { flex: 1, minWidth: 0, padding: '8px 0' } }, ...rows),
+      // scrollbar
+      E('div', { style: { width: 12, background: col('SideBar'), display: 'flex', justifyContent: 'center', paddingTop: 10 } },
+        E('div', { style: { width: 6, height: 70, borderRadius: 3, background: col('ScrollBar') } })));
+  }
+  assetTabBtn(tab) {
+    const on = this.state.assetTab === tab;
+    return 'height:26px;padding:0 16px;border-radius:6px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;background:' + (on ? 'rgba(140,124,246,.2)' : 'transparent') + ';color:' + (on ? '#c4bbff' : '#8a8a9a');
+  }
+
+  statusEl(status, refs) {
+    const E = React.createElement;
+    const pill = (txt, fg, bg, bd, dashed) => E('span', { style:{ display:'inline-flex',alignItems:'center',gap:5,fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:fg,background:bg,border:(dashed?'1px dashed ':'1px solid ')+bd,borderRadius:5,padding:'2px 7px' } }, txt);
+    if (status === 'webp') return pill('✕ WEBP rejected', '#e76461', 'rgba(231,100,97,.1)', '#5a2a2a');
+    if (status === 'missing') return pill('✕ file not found', '#e76461', 'rgba(231,100,97,.1)', '#5a2a2a');
+    if (status === 'badfmt') return pill('✕ .mp3 not allowed', '#e76461', 'rgba(231,100,97,.1)', '#5a2a2a');
+    if (status === 'dead') return pill('unreferenced · won\u2019t pack', '#6b6b7a', 'transparent', '#4a4a56', true);
+    return pill('↗ ' + refs + ' ' + (refs === 1 ? 'consumer' : 'consumers'), '#8c7cf6', 'rgba(140,124,246,.1)', '#3a3358');
+  }
+
+  buildAssetImages() {
+    const sel = this.state.selAsset;
+    const data = [
+      ['panels/wood_frame.png','PNG',4,'ok'], ['panels/stone_arch.png','PNG',2,'ok'],
+      ['buttons/btn_sheet.png','PNG',3,'ok'], ['textures/fabric.png','PNG',1,'ok'],
+      ['textures/cloth.jpg','JPG',1,'ok'], ['icons/star.png','PNG',0,'dead'],
+      ['ui/glow.webp','WEBP',1,'webp'], ['bg/parallax.bmp','BMP',1,'ok'],
+      ['panels/missing_frame.png','PNG',2,'missing'],
+    ];
+    return data.map(([name,fmt,refs,status]) => {
+      const bad = status === 'webp' || status === 'missing';
+      const on = sel === name;
+      const fmtRed = status === 'webp';
+      return {
+        name, fmt, bad, status, refs,
+        onClick: () => this.setState({ selAsset: name }),
+        nameColor: status === 'dead' ? '#7a7a8a' : '#cfcfda',
+        cardStyle: 'text-align:left;padding:9px;border-radius:10px;cursor:pointer;font-family:inherit;background:'+(on?'rgba(140,124,246,.08)':'#15151b')+';border:1px solid '+(bad?'#5a2a2a':(on?'#3a3358':'#2a2a34')),
+        thumbInner: 'width:52px;height:38px;border-radius:4px;border:2px solid '+(bad?'#7a3a3a':'#5a5a70')+';background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 6px,transparent 6px 12px)',
+        fmtBadge: 'position:absolute;top:6px;left:6px;font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:600;padding:2px 5px;border-radius:4px;background:rgba(12,12,16,.8);color:'+(fmtRed?'#e76461':'#9b9bab'),
+        statusTag: this.statusEl(status, refs),
+      };
+    });
+  }
+
+  buildAssetSounds() {
+    const E = React.createElement;
+    const sel = this.state.selAsset;
+    const data = [['sfx/click.ogg','OGG',2,'ok'],['sfx/hover.wav','WAV',1,'ok'],['sfx/legacy.mp3','MP3',0,'badfmt']];
+    return data.map(([name,fmt,refs,status]) => {
+      const on = sel === name;
+      const bad = status === 'badfmt';
+      const wave = E(React.Fragment, null, ...Array.from({length:26}).map((_,i)=>E('div',{key:i,style:{flex:1,height:(25+50*Math.abs(Math.sin(i*0.8+name.length)))+'%',background:bad?'#5a3a3a':'#6f5cf0',borderRadius:1,opacity:bad?.5:.9}})));
+      return {
+        name, fmt, wave,
+        onClick: () => this.setState({ selAsset: name }),
+        nameColor: bad ? '#7a7a8a' : '#cfcfda',
+        rowStyle: 'display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;font-family:inherit;background:'+(on?'rgba(140,124,246,.08)':'#15151b')+';border:1px solid '+(bad?'#5a2a2a':(on?'#3a3358':'#2a2a34')),
+        fmtBadge: 'font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;flex:0 0 auto;background:#1c1c24;color:'+(bad?'#e76461':'#9b9bab'),
+        statusTag: this.statusEl(status, refs),
+      };
+    });
+  }
+
+  buildAssetInspector() {
+    const E = React.createElement;
+    const info = {
+      'panels/wood_frame.png': { fmt:'PNG · 256×256', status:'ok', note:'Shared image sheet. Editing it affects every border that slices it.', refs:[['Borders','Window_0'],['Borders','Panel_0_0'],['Borders','Panel_1_0'],['Borders','GridItem_0']] },
+      'ui/glow.webp': { fmt:'WEBP', status:'webp', note:'webp is not accepted by the package builder. Re-export as png/jpg/jpeg/bmp.', refs:[['Backgrounds','Overlay_0 · layer 1']] },
+      'panels/missing_frame.png': { fmt:'PNG', status:'missing', note:'Referenced but not found under Gui/. The borders below will silently render nothing.', refs:[['Borders','Decoration_0'],['Borders','RaisedGroupBox_0']] },
+      'icons/star.png': { fmt:'PNG · 32×32', status:'dead', note:'No table references this file, so it will not be packed into the .lf_gui.', refs:[] },
+      'sfx/legacy.mp3': { fmt:'MP3', status:'badfmt', note:'mp3 is not accepted for sounds. Use ogg, wav, or flac.', refs:[] },
+      'sfx/click.ogg': { fmt:'OGG · 0.4s', status:'ok', note:'', refs:[['Response Curves','click_press · Sound Effect'],['Response Curves','hover_pop · Sound Effect']] },
+      'sfx/hover.wav': { fmt:'WAV · 0.2s', status:'ok', note:'', refs:[['Response Curves','idle_breathe · Sound Effect']] },
+    };
+    const d = info[this.state.selAsset] || { fmt:'PNG', status:'ok', note:'', refs:[] };
+    const banner = (status) => {
+      if (status === 'ok') return E('div',{style:{display:'flex',gap:7,padding:'8px 10px',borderRadius:7,background:'rgba(92,187,133,.08)',border:'1px solid #2a4a36'}},E('span',{style:{color:'#5cbb85'}},'✓'),E('span',{style:{fontSize:10,color:'#7fcaa0'}},'Exists under Gui/ · format accepted.'));
+      if (status === 'dead') return E('div',{style:{display:'flex',gap:7,padding:'8px 10px',borderRadius:7,background:'rgba(106,106,122,.1)',border:'1px dashed #4a4a56'}},E('span',{style:{color:'#8a8a9a'}},'○'),E('span',{style:{fontSize:10,color:'#9b9bab'}},'Unreferenced — excluded from the build.'));
+      const msg = status === 'webp' ? 'webp rejected by PackageBuilder.' : status === 'missing' ? 'File not found under Gui/.' : 'Unsupported audio format.';
+      return E('div',{style:{display:'flex',gap:7,padding:'8px 10px',borderRadius:7,background:'rgba(231,100,97,.08)',border:'1px solid #5a2a2a'}},E('span',{style:{color:'#e76461'}},'✕'),E('span',{style:{fontSize:10,color:'#e89b99'}},msg));
+    };
+    return E('div', null,
+      E('div',{style:{fontSize:10,fontWeight:700,letterSpacing:'.08em',color:'#5a5a68',marginBottom:6}},'ASSET'),
+      E('div',{style:{display:'flex',alignItems:'center',gap:8,height:34,padding:'0 11px',borderRadius:7,border:'1px solid #2a2a34',background:'#15151b'}},
+        E('span',{style:{flex:1,fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:'#e7e7ee',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},this.state.selAsset),
+        E('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#7a7a8a'}},d.fmt)),
+      E('div',{style:{marginTop:12}}, banner(d.status)),
+      d.note ? E('div',{style:{marginTop:10,fontSize:10,color:'#7a7a8a',lineHeight:1.5}}, d.note) : null,
+      E('div',{style:{marginTop:16,fontSize:10,fontWeight:700,letterSpacing:'.08em',color:'#5a5a68',marginBottom:8}}, 'REFERENCED BY · ' + d.refs.length),
+      d.refs.length ? E('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+        ...d.refs.map((r,i)=>E('div',{key:i,style:{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',borderRadius:7,border:'1px solid #2a2a34',background:'#15151b',cursor:'pointer'}},
+          E('span',{style:{fontSize:11,color:'#7a7a8a'}},r[0]+' ›'),
+          E('span',{style:{flex:1,fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#cfcfda'}},r[1]),
+          E('span',{style:{color:'#8c7cf6',fontSize:12}},'↗'))))
+        : E('div',{style:{fontSize:11,color:'#6b6b7a',fontStyle:'italic'}},'Nothing references this asset.'));
+  }
+  renderIssues() {
+    const E = React.createElement;
+    const groups = [
+      ['Errors — block the build', '#e76461', [
+        ['Dangling reference', 'TexCoord "scroll_fast" does not exist — layer dropped.', 'Backgrounds › Panel_0_0 · layer 1', 'backgrounds'],
+        ['Format rejected', 'ui/glow.webp — webp is not accepted (png/jpg/jpeg/bmp).', 'Assets › Images', 'assets'],
+        ['Missing file', 'panels/missing_frame.png not found under Gui/.', 'Assets › Images', 'assets'],
+      ]],
+      ['Warnings — silently misbehave', '#e6ad4d', [
+        ['Dangling reference', 'OnClick → "click_pres" — no such Event (did you mean click_press?).', 'Response Curves › Button_0', 'curves'],
+        ['timeFactor ≠ 0', 'TexCoord "drift_warn" timeFactor=0.5 — only 0 is reliable (shader bug).', 'Backgrounds › TexCoords', 'backgrounds'],
+        ['Cells units', 'Window_0 Cells grid-lines hold values >1 → read as pixels of the 1024² sheet; confirm sheet size.', 'Borders › Window_0', 'borders'],
+      ]],
+      ['Notices — ignored by the engine', '#8a8a9a', [
+        ['Unknown key', 'FlatGroupBox_0 & FlatGroupBox_1 — not valid enums (need FlatGroupBox_X_Y). Both dropped.', 'Borders', 'borders'],
+        ['Unknown field', 'BlendMode on FlatGroupBox_1 — no such field; silently ignored.', 'Borders', 'borders'],
+        ['Unknown key', 'Progess_0_0 (typo) & texCoord0 — silently dropped.', 'Backgrounds › Lights', 'backgrounds'],
+        ['Dead entries', '4 unreferenced entries won\u2019t be packed (aurora_dead, dead_uv, …).', 'Multiple tables', 'backgrounds'],
+      ]],
+    ];
+    return E('div', { style:{ display:'flex',flexDirection:'column',height:'100%' } },
+      E('div', { style:{ flex:'0 0 auto',display:'flex',alignItems:'center',gap:10,padding:'14px 16px',borderBottom:'1px solid #2a2a34' } },
+        E('span',{style:{fontSize:13,fontWeight:700,color:'#e7e7ee'}},'Validation'),
+        E('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#e76461',background:'rgba(231,100,97,.1)',border:'1px solid #5a2a2a',borderRadius:5,padding:'2px 7px'}},'3 errors'),
+        E('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#e6ad4d'}},'3 warnings'),
+        E('div',{style:{flex:1}}),
+        E('button',{onClick:this.toggleIssues,style:{width:26,height:26,borderRadius:6,border:'1px solid #2a2a34',background:'#1c1c24',color:'#9b9bab',cursor:'pointer',fontSize:13}},'✕')),
+      E('div',{style:{flex:'0 0 auto',padding:'10px 16px',borderBottom:'1px solid #2a2a34',display:'flex',gap:8,alignItems:'center',background:'rgba(231,100,97,.05)'}},
+        E('span',{style:{color:'#e76461'}},'⬡'),
+        E('span',{style:{fontSize:11,color:'#e89b99',lineHeight:1.4}},'Build is blocked by 3 errors. Schema-valid JSON can still fail here — these are the checks the schema can\u2019t do.')),
+      E('div',{style:{flex:1,overflowY:'auto',padding:'12px 16px'}},
+        ...groups.map((g,gi)=>E('div',{key:gi,style:{marginBottom:18}},
+          E('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:9}},
+            E('span',{style:{width:7,height:7,borderRadius:'50%',background:g[1]}}),
+            E('span',{style:{fontSize:10,fontWeight:700,letterSpacing:'.06em',color:'#8a8a9a',textTransform:'uppercase'}},g[0])),
+          ...g[2].map((it,i)=>E('button',{key:i,onClick:()=>this.setSurface(it[3]),style:{display:'block',width:'100%',textAlign:'left',marginBottom:7,padding:'9px 11px',borderRadius:8,border:'1px solid #2a2a34',background:'#15151b',cursor:'pointer',fontFamily:'inherit'}},
+            E('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:3}},
+              E('span',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:600,color:g[1]}},it[0]),
+              E('div',{style:{flex:1}}),
+              E('span',{style:{fontSize:10,color:'#8c7cf6'}},'go ↗')),
+            E('div',{style:{fontSize:11,color:'#cfcfda',lineHeight:1.45,marginBottom:4}},it[1]),
+            E('div',{style:{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#6b6b7a'}},it[2])))))));
+  }
+}
+</script>
+</body>
+</html>
