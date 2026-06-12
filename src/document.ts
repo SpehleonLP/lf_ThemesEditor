@@ -57,16 +57,23 @@ export interface PackApply {
 
 const flat = (g: CellGrid): EditorCell[] => g.flat().map((c) => ({ rect: [...c.rect] as Vec4, mirrorX: c.mirrorX, mirrorY: c.mirrorY }));
 
+// A pack result always rewrites the layer as the object form; the string forms
+// ("#OVERLAY", copy refs) can't carry the new Image/Cells.
+const objectLayer = (entry: any, key: 'Mask' | 'Overlay'): any => {
+  if (typeof entry[key] !== 'object' || entry[key] === null || Array.isArray(entry[key])) entry[key] = {};
+  return entry[key];
+};
+
 export function applyPackResult(entry: any, r: PackApply): void {
   if (r.overlayImage && r.overlayCells) {
-    entry.Overlay ??= {};
-    entry.Overlay.Image = r.overlayImage;
-    entry.Overlay.Cells = serializeCells(r.overlayCells);
+    const overlay = objectLayer(entry, 'Overlay');
+    overlay.Image = r.overlayImage;
+    overlay.Cells = serializeCells(r.overlayCells);
   }
   if (r.maskImage && r.maskCells) {
-    entry.Mask ??= {};
-    entry.Mask.Image = r.maskImage;
-    entry.Mask.Cells = r.linked ? '#COPY' : serializeCells(r.maskCells);
+    const mask = objectLayer(entry, 'Mask');
+    mask.Image = r.maskImage;
+    mask.Cells = r.linked ? '#COPY' : serializeCells(r.maskCells);
   }
   setEditorMeta(entry, {
     version: 1,
