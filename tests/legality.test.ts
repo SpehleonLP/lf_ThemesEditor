@@ -43,6 +43,29 @@ test('findCanvas on empty input returns the smallest legal sheet with nothing pl
   expect(r!.placed).toEqual([]);
 });
 
+test('findCanvas keeps the trailing canvas edge clear by one gutter', () => {
+  // The packer pads only TRAILING edges between sprites, so the canvas's own
+  // right/bottom edge needs a reserved gutter or edge sprites bleed under
+  // bilinear/mip sampling after the engine repacks sheets into megatextures.
+  // A 120x120 piece pads to 128 and (without the reserved gutter) packs flush
+  // into a 128x128 sheet — its trailing pad ends exactly at the canvas edge.
+  const r = findCanvas([{ id: 0, w: 120, h: 120 }], { gutter: 8, align: 4 })!;
+  expect(r).not.toBeNull();
+  // Placed (Placed extends Piece, so it carries .w/.h): the sprite's right/bottom
+  // edge plus one full gutter must still fit inside the reported canvas.
+  for (const p of r.placed) {
+    expect(p.x + p.w).toBeLessThanOrEqual(r.w - 8);
+    expect(p.y + p.h).toBeLessThanOrEqual(r.h - 8);
+  }
+});
+
+test('a piece that fills a legal canvas spills to the next size to reserve the gutter', () => {
+  // 120x120 fits flush in 128x128 without the gutter; with it, it must grow.
+  const r = findCanvas([{ id: 0, w: 120, h: 120 }], { gutter: 8, align: 4 })!;
+  expect(r).not.toBeNull();
+  expect(r.w * r.h).toBeGreaterThan(128 * 128);
+});
+
 test('findCanvas returns null when a piece exceeds maxDim', () => {
   expect(findCanvas([{ id: 0, w: 5000, h: 10 }], { gutter: 0, align: 4 }, 4096)).toBeNull();
 });
