@@ -206,7 +206,45 @@ export const bordersLayerImageValidator: Validator = (pkg) => {
   return out;
 };
 
-const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator, bordersLayerImageValidator];
+// rc-marks — the engine's Catmull-Rom evaluation assumes strictly ascending knots and
+// fixed-dim values; the schemas document it but ajv can't express the ordering.
+const RC_MARK_TABLES: { table: string; ns: Namespace; dim: number }[] = [
+  { table: '1D Splines', ns: 'rc:splines1d', dim: 1 },
+  { table: '2D Splines', ns: 'rc:splines2d', dim: 2 },
+  { table: 'Gradients', ns: 'rc:gradients', dim: 4 },
+];
+export const rcMarksValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const doc = pkg.files.responseCurves;
+  if (doc.loadError || doc.missing || !doc.root) return out;
+  for (const { table, ns, dim } of RC_MARK_TABLES) {
+    const tbl = doc.root[table];
+    if (!tbl || typeof tbl !== 'object') continue;
+    for (const name of Object.keys(tbl)) {
+      const marks = tbl[name];
+      if (!Array.isArray(marks)) continue; // shape itself is ajv's job
+      const issue = (message: string) => out.push({
+        severity: 'error', category: 'rc-marks', message,
+        file: 'responseCurves', jsonPath: [table, name],
+        nav: { surface: 'responseCurves', entry: { ns, name } },
+      });
+      const badShape = marks.some((m: any) =>
+        !Array.isArray(m) || typeof m[0] !== 'number'
+        || (dim === 1 ? typeof m[1] !== 'number'
+            : !Array.isArray(m[1]) || m[1].length !== dim || m[1].some((v: any) => typeof v !== 'number')));
+      if (badShape) { issue(`${NS_LABEL[ns]} "${name}" has a malformed mark — expected [t, ${dim === 1 ? 'value' : `[${dim} numbers]`}].`); continue; }
+      for (let i = 1; i < marks.length; ++i) {
+        if (!(marks[i][0] > marks[i - 1][0])) {
+          issue(`${NS_LABEL[ns]} "${name}" mark times are not strictly ascending (t[${i}]=${marks[i][0]} after t[${i - 1}]=${marks[i - 1][0]}) — spline evaluation misbehaves.`);
+          break;
+        }
+      }
+    }
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator, bordersLayerImageValidator, rcMarksValidator];
 
 export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
   return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));
