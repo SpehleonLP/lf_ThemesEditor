@@ -1,5 +1,5 @@
 // src/ui/rc/soundForm.ts
-import { rcState } from '../../rc/state';
+import { rcState, rcNotify } from '../../rc/state';
 import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
 
@@ -15,7 +15,7 @@ export function mountSoundForm(h: HTMLElement, d: RcFormDeps): void {
   const fileRow = document.createElement('label'); fileRow.className = 'rc-slot';
   fileRow.append(span('file'));
   const fileSel = document.createElement('select'); fileSel.dataset.k = 'file';
-  fileSel.addEventListener('change', () => { const s = soundOf(); if (!s) return; s.file = fileSel.value; deps!.markDirty(); });
+  fileSel.addEventListener('change', () => { const s = soundOf(); if (!s) return; s.file = fileSel.value; deps!.markDirty(); rcNotify(); });
   fileRow.appendChild(fileSel); fs.appendChild(fileRow);
 
   for (const key of RANGES) {
@@ -28,7 +28,7 @@ export function mountSoundForm(h: HTMLElement, d: RcFormDeps): void {
       const s = soundOf(); if (!s) return;
       if (on.checked) s[key] = [Number(min.value) || 0, Number(max.value) || 0];
       else delete s[key];
-      deps!.markDirty();
+      deps!.markDirty(); rcNotify();
     };
     on.addEventListener('change', writeRange); min.addEventListener('change', writeRange); max.addEventListener('change', writeRange);
     row.append(on, min, max); fs.appendChild(row);
@@ -37,7 +37,7 @@ export function mountSoundForm(h: HTMLElement, d: RcFormDeps): void {
 
   const cf = document.createElement('label'); cf.className = 'rc-comment'; cf.textContent = 'Comment ';
   const ci = document.createElement('input'); ci.type = 'text'; ci.dataset.k = 'Comment';
-  ci.addEventListener('change', () => { const s = soundOf(); if (!s) return; if (ci.value) s.Comment = ci.value; else delete s.Comment; deps!.markDirty(); });
+  ci.addEventListener('change', () => { const s = soundOf(); if (!s) return; if (ci.value) s.Comment = ci.value; else delete s.Comment; deps!.markDirty(); rcNotify(); });
   cf.appendChild(ci); h.appendChild(cf);
   updateSoundForm();
 }

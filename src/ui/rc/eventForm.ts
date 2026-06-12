@@ -1,5 +1,5 @@
 // src/ui/rc/eventForm.ts
-import { rcState, setTrigger } from '../../rc/state';
+import { rcState, setTrigger, rcNotify } from '../../rc/state';
 import { CHANNELS, CHANNEL_KEYS } from '../../rc/channels';
 import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
@@ -20,14 +20,14 @@ export function mountEventForm(h: HTMLElement, d: RcFormDeps): void {
     const row = document.createElement('label'); row.className = 'rc-slot';
     const name = document.createElement('span'); name.className = 'rc-slot-name'; name.textContent = `${key} (${CHANNELS[key].table})`;
     const sel = document.createElement('select'); sel.dataset.ch = key;
-    sel.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (sel.value) ev[key] = sel.value; else delete ev[key]; deps!.markDirty(); });
+    sel.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (sel.value) ev[key] = sel.value; else delete ev[key]; deps!.markDirty(); rcNotify(); });
     row.append(name, sel); fs.appendChild(row);
   }
   h.appendChild(fs);
 
   const cf = document.createElement('label'); cf.className = 'rc-comment'; cf.textContent = 'Comment ';
   const ci = document.createElement('input'); ci.type = 'text'; ci.dataset.k = 'Comment';
-  ci.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (ci.value) ev.Comment = ci.value; else delete ev.Comment; deps!.markDirty(); });
+  ci.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (ci.value) ev.Comment = ci.value; else delete ev.Comment; deps!.markDirty(); rcNotify(); });
   cf.appendChild(ci); h.appendChild(cf);
   updateEventForm();
 }

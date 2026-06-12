@@ -1,5 +1,5 @@
 // src/ui/rc/curveForm.ts
-import { rcState, setTrigger } from '../../rc/state';
+import { rcState, setTrigger, rcNotify } from '../../rc/state';
 import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
 
@@ -37,7 +37,7 @@ export function mountCurveForm(h: HTMLElement, d: RcFormDeps): void {
   h.append(group('States (loop)', STATE_SLOTS), group('Events (one-shot)', EVENT_SLOTS));
   const cf = document.createElement('label'); cf.className = 'rc-comment';
   cf.textContent = 'Comment '; const ci = document.createElement('input'); ci.type = 'text'; ci.dataset.k = 'Comment';
-  ci.addEventListener('change', () => { const c = curveOf(); if (!c) return; if (ci.value) c.Comment = ci.value; else delete c.Comment; deps!.markDirty(); });
+  ci.addEventListener('change', () => { const c = curveOf(); if (!c) return; if (ci.value) c.Comment = ci.value; else delete c.Comment; deps!.markDirty(); rcNotify(); });
   cf.appendChild(ci); h.appendChild(cf);
   updateCurveForm();
 }
@@ -45,7 +45,7 @@ export function mountCurveForm(h: HTMLElement, d: RcFormDeps): void {
 function writeSlot(slot: string, value: string): void {
   const c = curveOf(); if (!c) return;
   if (value) c[slot] = value; else delete c[slot];
-  deps!.markDirty();
+  deps!.markDirty(); rcNotify();
 }
 
 export function updateCurveForm(): void {
