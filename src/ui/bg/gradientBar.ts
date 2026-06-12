@@ -71,12 +71,13 @@ export function createGradientBar(host: HTMLElement, opts: GradientBarOpts): { u
   const maxTOf = (marks: Mark[]) => (marks.length ? Math.max(...marks.map((m) => m[0]), 1) : 1);
 
   let dragging = -1;
+  let dragMaxT: number | null = null;
   bar.addEventListener('pointerdown', (e) => {
     const marks = marksOf(); if (!marks.length) return;
     const maxT = maxTOf(marks); const x = e.offsetX;
     let nearest = 0, best = Infinity;
     marks.forEach((m, i) => { const d = Math.abs(xOfMark(m, maxT) - x); if (d < best) { best = d; nearest = i; } });
-    if (best <= 8) { dragging = nearest; sel = nearest; bar.setPointerCapture(e.pointerId); update(); }
+    if (best <= 8) { dragging = nearest; sel = nearest; dragMaxT = maxT; bar.setPointerCapture(e.pointerId); update(); }
     else {
       // u is the parametric position ∈[0,1]; sampleRow takes u directly.
       // Stored mark t: linear-srgb → t=u; engine-cubic-raw → t=u*maxT.
@@ -89,18 +90,21 @@ export function createGradientBar(host: HTMLElement, opts: GradientBarOpts): { u
     }
   });
   bar.addEventListener('pointermove', (e) => {
-    if (dragging < 0) return;
-    const marks = marksOf().slice(); const maxT = maxTOf(marks);
-    marks[dragging] = [tFromX(e.offsetX, maxT), marks[dragging][1]];
+    if (dragging < 0 || dragMaxT === null) return;
+    const marks = marksOf().slice();
+    marks[dragging] = [tFromX(e.offsetX, dragMaxT), marks[dragging][1]];
     opts.setMarks(marks, { live: true });
   });
-  bar.addEventListener('pointerup', (e) => {
-    if (dragging < 0) return; bar.releasePointerCapture(e.pointerId);
+  function endDrag(e: PointerEvent): void {
+    if (dragging < 0) return;
+    try { bar.releasePointerCapture(e.pointerId); } catch { /* already released */ }
     const marks = marksOf().slice();
-    const draggedT = marks[dragging][0];
-    marks.sort((a, b) => a[0] - b[0]); sel = marks.findIndex((m) => m[0] === draggedT);
-    dragging = -1; opts.setMarks(marks, { live: false });
-  });
+    const dragged = marks[dragging];
+    marks.sort((a, b) => a[0] - b[0]); sel = Math.max(0, marks.indexOf(dragged)); // identity, mirrors commitStop's `m === copy`
+    dragging = -1; dragMaxT = null; opts.setMarks(marks, { live: false });
+  }
+  bar.addEventListener('pointerup', endDrag);
+  bar.addEventListener('pointercancel', endDrag);
 
   const commitStop = (mutate: (m: Mark) => void) => {
     const marks = marksOf().slice(); if (!marks[sel]) return;
