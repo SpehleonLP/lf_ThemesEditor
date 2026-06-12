@@ -1,6 +1,6 @@
 // src/ui/bg/gradientBar.ts
 import { bakeGradient, type Mark } from '../../bg/gradients';
-import { sampleSpline } from '../../rc/spline';
+import { sampleSpline, type AnyMark } from '../../rc/spline';
 
 export type GradientInterp = 'linear-srgb' | 'engine-cubic-raw';
 
@@ -23,7 +23,7 @@ function rgbToHex(r: number, g: number, b: number): string {
 }
 
 // Sample an RGBA at parametric x∈[0,1] for display, honouring the interp mode.
-function sampleRow(marks: Mark[], interp: GradientInterp): (x: number) => [number, number, number, number] {
+export function sampleRow(marks: Mark[], interp: GradientInterp): (x: number) => [number, number, number, number] {
   if (interp === 'linear-srgb') {
     const baked = bakeGradient(marks);
     return (x) => {
@@ -40,7 +40,8 @@ function sampleRow(marks: Mark[], interp: GradientInterp): (x: number) => [numbe
   const maxT = marks.length ? marks[marks.length - 1][0] : 1;
   return (x) => {
     const t = (maxT > 0 ? x * maxT : 0);
-    const v = sampleSpline(marks as any, 4, t, false);
+    // Mark ([t,[r,g,b,a]]) is a dim-4 AnyMark; tuple/array variance needs an explicit cast.
+    const v = sampleSpline(marks as unknown as AnyMark[], 4, t, false);
     return [v[0], v[1], v[2], v[3]];
   };
 }
@@ -77,8 +78,11 @@ export function createGradientBar(host: HTMLElement, opts: GradientBarOpts): { u
     marks.forEach((m, i) => { const d = Math.abs(xOfMark(m, maxT) - x); if (d < best) { best = d; nearest = i; } });
     if (best <= 8) { dragging = nearest; sel = nearest; bar.setPointerCapture(e.pointerId); update(); }
     else {
-      const t = tFromX(x, maxT);
-      const row = sampleRow(marks, opts.interp)(opts.interp === 'engine-cubic-raw' ? (maxT > 0 ? t / maxT : 0) : t);
+      // u is the parametric position ∈[0,1]; sampleRow takes u directly.
+      // Stored mark t: linear-srgb → t=u; engine-cubic-raw → t=u*maxT.
+      const u = clamp01(x / WIDTH);
+      const t = opts.interp === 'engine-cubic-raw' ? u * (maxT > 0 ? maxT : 1) : u;
+      const row = sampleRow(marks, opts.interp)(u);
       const col: Mark = [t, [row[0], row[1], row[2], row[3]]];
       const next = [...marks, col]; sel = next.length - 1;
       opts.setMarks(next, { live: false });
@@ -137,7 +141,6 @@ export function createGradientBar(host: HTMLElement, opts: GradientBarOpts): { u
 
   function update(): void {
     const marks = marksOf();
-    host.style.display = marks ? '' : 'none';
     drawBar();
     const m = marks[sel];
     const active = document.activeElement;
