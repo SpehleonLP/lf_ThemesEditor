@@ -18,7 +18,7 @@ export function flushLayers(): void {
   const editFor = (key: 'Mask' | 'Overlay') => {
     const lyr = state.layers![key.toLowerCase() as 'mask' | 'overlay'];
     const hasOwnCells = entry?.[key] && typeof entry[key] !== 'string' && typeof entry[key].Cells !== 'string';
-    return { cells: lyr.cells && hasOwnCells ? lyr.cells : null, edgeFill: lyr.edgeFill as any, centerFill: lyr.centerFill as any };
+    return { cells: lyr.cells && hasOwnCells ? lyr.cells : null, edgeFill: lyr.edgeFill, centerFill: lyr.centerFill };
   };
   applyLayerToEntry(entry, 'Mask', editFor('Mask'));
   applyLayerToEntry(entry, 'Overlay', editFor('Overlay'));

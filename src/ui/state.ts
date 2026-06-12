@@ -1,5 +1,5 @@
 import type { BordersDoc } from '../document';
-import type { CellGrid, Rgba } from '../types';
+import type { CellGrid, FillMode, Rgba } from '../types';
 
 export type LayerName = 'mask' | 'overlay';
 
@@ -7,8 +7,8 @@ export interface LayerState {
   imagePath: string | null;   // as written in JSON (relative to Gui root)
   image: Rgba | null;
   cells: CellGrid | null;     // null = #COPY of the other layer
-  edgeFill: [string, string];
-  centerFill: [string, string];
+  edgeFill: [FillMode, FillMode];
+  centerFill: [FillMode, FillMode];
 }
 
 export interface AppState {

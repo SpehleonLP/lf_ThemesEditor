@@ -1,5 +1,6 @@
 // src/ui/propertiesForm.ts
 import { state, notify } from './state';
+import type { FillMode } from '../types';
 
 const FILLS = ['STRETCH', 'TILE', 'SNAP', 'FLEXIBLE', 'CENTER'];
 
@@ -40,7 +41,7 @@ export function renderPropertiesForm(host: HTMLElement): void {
     s.onchange = () => {
       const which = s.dataset.fill!;
       const tgt = which.startsWith('edge') ? L.edgeFill : L.centerFill;
-      tgt[Number(which.slice(-1))] = s.value as any;
+      tgt[Number(which.slice(-1))] = s.value as FillMode;
       markDirty();
     };
   });

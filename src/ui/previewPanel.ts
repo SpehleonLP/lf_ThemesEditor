@@ -1,6 +1,6 @@
 import { PreviewRenderer, type PreviewInput, type PreviewLayer } from '../preview/renderer';
 import { state, type LayerName } from './state';
-import type { FillMode, Vec4 } from '../types';
+import type { Vec4 } from '../types';
 import { readMaskMode } from '../maskMode';
 
 let renderer: PreviewRenderer | null = null;
@@ -12,8 +12,8 @@ function layerInput(name: LayerName): PreviewLayer | null {
   if (!L?.image || !L.cells) return null;
   return {
     image: L.image, cells: L.cells,
-    edgeFill: L.edgeFill as [FillMode, FillMode],
-    centerFill: L.centerFill as [FillMode, FillMode],
+    edgeFill: L.edgeFill,
+    centerFill: L.centerFill,
   };
 }
 

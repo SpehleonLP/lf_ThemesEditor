@@ -1,15 +1,16 @@
 import { parseCellsJson, toEditorGrid, resolveInfinity } from '../cells';
 import { loadImage } from '../images';
 import { state, notify, type LayerState } from './state';
+import type { FillMode } from '../types';
 import { exitNinePatch } from './rectEditor';
 
 async function loadLayer(entry: any, key: 'Mask' | 'Overlay'): Promise<LayerState> {
-  const ls: LayerState = { imagePath: null, image: null, cells: null, edgeFill: ['STRETCH', 'STRETCH'], centerFill: ['STRETCH', 'STRETCH'] };
+  const ls: LayerState = { imagePath: null, image: null, cells: null, edgeFill: ['STRETCH', 'STRETCH'] as [FillMode, FillMode], centerFill: ['STRETCH', 'STRETCH'] as [FillMode, FillMode] };
   const raw = entry?.[key];
   if (raw == null || typeof raw === 'string') return ls; // absent, or Mask:"#OVERLAY"
   ls.imagePath = raw.Image ?? null;
-  if (raw.EdgeFill) ls.edgeFill = [String(raw.EdgeFill[0]).toUpperCase(), String(raw.EdgeFill[1]).toUpperCase()] as [string, string];
-  if (raw.CenterFill) ls.centerFill = [String(raw.CenterFill[0]).toUpperCase(), String(raw.CenterFill[1]).toUpperCase()] as [string, string];
+  if (raw.EdgeFill) ls.edgeFill = [String(raw.EdgeFill[0]).toUpperCase(), String(raw.EdgeFill[1]).toUpperCase()] as [FillMode, FillMode];
+  if (raw.CenterFill) ls.centerFill = [String(raw.CenterFill[0]).toUpperCase(), String(raw.CenterFill[1]).toUpperCase()] as [FillMode, FillMode];
   if (ls.imagePath) {
     try { ls.image = await loadImage(ls.imagePath); }
     catch (e) { console.warn(`image ${ls.imagePath}:`, e); }
