@@ -293,10 +293,10 @@ test('backgrounds: add backdrop slot → configure layer → dirty → Save', as
   await page.goto('/');
   await page.getByRole('button', { name: /Backgrounds/ }).click();
   await page.locator('.bg-tab', { hasText: 'Backdrops' }).click();
-  // add a slot via the + button (auto-fills the first unused name)
-  // Playwright's accept() without an arg returns '' for prompts, so echo the prompt's default value.
-  page.once('dialog', (d) => d.accept(d.defaultValue())); // prompt → default value
+  // add a slot via the + button → pick the first offered slot from the dropdown dialog
   await page.locator('.bg-el-add').click();
+  await page.locator('.picker-dialog select').first().selectOption({ index: 0 });
+  await page.locator('.picker-dialog button', { hasText: 'Add' }).click();
   // enable layer 0 + enable glass so the entry is valid
   await page.locator('[data-layer="0"] [data-l="enabled"]').check();
   await page.locator('[data-g="enabled"]').check();
