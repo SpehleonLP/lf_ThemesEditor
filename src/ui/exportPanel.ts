@@ -1,6 +1,7 @@
 import { listDir, writeFileBytes } from '../api';
 import { defaultCellsForImage } from '../cells';
-import { applyPackResult, serializeDocument } from '../document';
+import { applyPackResult } from '../document';
+import { serializeFile } from '../package/model';
 import { loadImage, SUPPORTED_IMAGE_EXTS } from '../images';
 import { encodePng } from '../png';
 import { packLayer, type PackLayerInput } from '../packer';
@@ -84,6 +85,7 @@ export function renderExportPanel(host: HTMLElement): void {
         paths[sheet.name] = p;
       }
       wroteSheets = true;
+      if (!state.file) throw new Error('borders file not loaded');
       const entry = state.doc!.root[state.selected!];
       applyPackResult(entry, {
         overlayImage: paths['overlay'] ?? null,
@@ -95,7 +97,8 @@ export function renderExportPanel(host: HTMLElement): void {
         sourceCells: (L.overlay.cells ?? L.mask.cells)!,
         pack: { gutter, align: 4 },
       });
-      await writeFileBytes('borders.json', serializeDocument(state.doc!));
+      await writeFileBytes('borders.json', serializeFile(state.file));
+      state.file.dirty = false;
       state.dirty = false;
       status.textContent = `packed → ${Object.values(paths).join(', ')}`;
       notify();

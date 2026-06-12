@@ -20,14 +20,6 @@ export function numericBorderKeys(root: Record<string, any>): string[] {
   return Object.keys(root).filter((k) => /^[0-9]+$/.test(k));
 }
 
-export function parseDocument(text: string): BordersDoc {
-  return wrapBordersRoot(JSON.parse(text) as Record<string, any>);
-}
-
-export function serializeDocument(doc: BordersDoc): string {
-  return JSON.stringify(doc.root, null, '\t') + '\n';
-}
-
 export function getEditorMeta(entry: any): any | undefined {
   return entry?.Editor;
 }

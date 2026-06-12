@@ -56,6 +56,7 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
       </footer>`;
     // Share the package model's root — do NOT re-read borders.json.
     state.doc = wrapBordersRoot(bordersFile.root);
+    state.file = bordersFile;
 
     // Wrap each existing render closure as a Panel. mount() and update() are identical for now
     // (a pure refactor); later tasks (2.2-2.4) split each into a real one-time mount vs in-place
