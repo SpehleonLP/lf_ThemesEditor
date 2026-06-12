@@ -119,11 +119,6 @@ function activeImage(): { width: number; height: number } | null {
   return state.layers?.[state.activeLayer]?.image ?? null;
 }
 
-function imageSize(): [number, number] {
-  const img = activeImage();
-  return [img?.width ?? 0, img?.height ?? 0];
-}
-
 // Availability of the line modes, derived from the ACTIVE layer's cells. '5x5lines' is also
 // available whenever '3x3' is (3x3 is a special partition). 'free' is always available.
 function modeAvailability(): { has3x3: boolean; has5x5: boolean; reason: string } {
@@ -151,6 +146,9 @@ function setGridMode(mode: GridMode): void {
     if ((mode === '3x3' && !a.has3x3) || (mode === '5x5lines' && !a.has5x5)) return; // unavailable
   }
   gridMode = mode;
+  // Clear BOTH modes' working state before re-seeding: seedLines() only sets the ACTIVE mode's
+  // state (and only nulls both when cells are absent), so without this the inactive mode's stale
+  // pixel-space lines would leak across a mode switch (e.g. 3x3 -> 5x5, or either -> free).
   cuts3x3 = null; lines5x5 = null;
   seedLines();
   if (canvas) { draw(canvas); updateCellMap(); }
@@ -194,33 +192,44 @@ function hitLine(sx: number, sy: number): DragMode | null {
   return best;
 }
 
-function dragCut(mode: Extract<DragMode, { kind: 'cut' }>, ix: number, iy: number): void {
+// Returns whether the stored cut value actually changed (after clamp+round). The pointermove
+// handler accumulates this so a no-op drag (clamped/sub-pixel jiggle) never dirties the document.
+function dragCut(mode: Extract<DragMode, { kind: 'cut' }>, ix: number, iy: number): boolean {
   const img = activeImage();
-  if (!cuts3x3 || !img) return;
+  if (!cuts3x3 || !img) return false;
   if (mode.axis === 'x') {
     const v = Math.max(0, Math.min(img.width, Math.round(ix)));
     // clamp to the sibling so the held line never crosses (index stays put)
-    cuts3x3.xCuts[mode.index] = mode.index === 0
+    const next = mode.index === 0
       ? Math.min(v, cuts3x3.xCuts[1])
       : Math.max(v, cuts3x3.xCuts[0]);
-  } else {
-    const v = Math.max(0, Math.min(img.height, Math.round(iy)));
-    cuts3x3.yCuts[mode.index] = mode.index === 0
-      ? Math.min(v, cuts3x3.yCuts[1])
-      : Math.max(v, cuts3x3.yCuts[0]);
+    const before = cuts3x3.xCuts[mode.index];
+    cuts3x3.xCuts[mode.index] = next;
+    return before !== next;
   }
+  const v = Math.max(0, Math.min(img.height, Math.round(iy)));
+  const next = mode.index === 0
+    ? Math.min(v, cuts3x3.yCuts[1])
+    : Math.max(v, cuts3x3.yCuts[0]);
+  const before = cuts3x3.yCuts[mode.index];
+  cuts3x3.yCuts[mode.index] = next;
+  return before !== next;
 }
 
-function dragLine(mode: Extract<DragMode, { kind: 'line' }>, ix: number, iy: number): void {
+// Returns whether the stored line value actually changed (after clamp+round). See dragCut.
+function dragLine(mode: Extract<DragMode, { kind: 'line' }>, ix: number, iy: number): boolean {
   const img = activeImage();
-  if (!lines5x5 || !img) return;
+  if (!lines5x5 || !img) return false;
   const arr = mode.axis === 'x' ? lines5x5.xLines : lines5x5.yLines;
   const max = mode.axis === 'x' ? img.width : img.height;
   const raw = Math.round(mode.axis === 'x' ? ix : iy);
   // clamp to neighbors so lines never cross (rewrite5x5Line clamps identically on commit)
   const lower = mode.index > 0 ? arr[mode.index - 1] : 0;
   const upper = mode.index < 5 ? arr[mode.index + 1] : max;
-  arr[mode.index] = Math.max(0, Math.min(max, Math.max(lower, Math.min(upper, raw))));
+  const next = Math.max(0, Math.min(max, Math.max(lower, Math.min(upper, raw))));
+  const before = arr[mode.index];
+  arr[mode.index] = next;
+  return before !== next;
 }
 
 // --- Panel: built once via mountCellsPanel, refreshed in place via updateCellsPanel. ---
@@ -334,8 +343,8 @@ export function mountCellsPanel(host: HTMLElement): void {
     const dx = e.offsetX - drag.lastX, dy = e.offsetY - drag.lastY;
     drag.lastX = e.offsetX; drag.lastY = e.offsetY;
     if (drag.mode.kind === 'pan') { view.ox += dx; view.oy += dy; } // view-only
-    else if (drag.mode.kind === 'cut') { const [ix, iy] = toImage(e.offsetX, e.offsetY); dragCut(drag.mode, ix, iy); drag.changed = true; }
-    else if (drag.mode.kind === 'line') { const [ix, iy] = toImage(e.offsetX, e.offsetY); dragLine(drag.mode, ix, iy); drag.changed = true; }
+    else if (drag.mode.kind === 'cut') { const [ix, iy] = toImage(e.offsetX, e.offsetY); drag.changed ||= dragCut(drag.mode, ix, iy); }
+    else if (drag.mode.kind === 'line') { const [ix, iy] = toImage(e.offsetX, e.offsetY); drag.changed ||= dragLine(drag.mode, ix, iy); }
     else { applyDrag(dx / view.zoom, dy / view.zoom, drag.mode); drag.changed = true; }
     draw(c); // mutate local lines / in-memory rects only; commit happens on pointerup
   };
@@ -362,10 +371,12 @@ export function mountCellsPanel(host: HTMLElement): void {
 // now-updated cells.
 function commit3x3(): void {
   if (!cuts3x3 || !state.layers) return;
-  const size = imageSize();
   for (const ln of rewriteTargets()) {
     const layer = state.layers[ln];
-    if (!layer?.cells) continue;
+    if (!layer?.cells) continue; // #COPY layer: no cells to rewrite
+    // Resolve image size PER TARGET LAYER: mask/overlay are independent and may differ in dims;
+    // rewrite3x3 resolves the infinity sentinel against these, so the active layer's size is wrong.
+    const size: [number, number] = [layer.image?.width ?? 0, layer.image?.height ?? 0];
     layer.cells = rewrite3x3(layer.cells, cuts3x3.xCuts, cuts3x3.yCuts, size);
   }
   state.dirty = true;
@@ -376,11 +387,13 @@ function commit3x3(): void {
 // mirror flags), then dirty + notify once.
 function commit5x5(axis: 'x' | 'y', index: number): void {
   if (!lines5x5 || !state.layers) return;
-  const size = imageSize();
   const newValue = (axis === 'x' ? lines5x5.xLines : lines5x5.yLines)[index];
   for (const ln of rewriteTargets()) {
     const layer = state.layers[ln];
-    if (!layer?.cells) continue;
+    if (!layer?.cells) continue; // #COPY layer: no cells to rewrite
+    // Per-layer image size: rewrite5x5Line's outer-line max clamp uses these dims, so the
+    // active layer's size would silently corrupt a differently-sized non-active linked layer.
+    const size: [number, number] = [layer.image?.width ?? 0, layer.image?.height ?? 0];
     layer.cells = rewrite5x5Line(layer.cells, axis, index, newValue, size);
   }
   state.dirty = true;
