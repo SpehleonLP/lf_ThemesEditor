@@ -613,12 +613,13 @@ describe('readLayers', () => {
 });
 
 describe('writeLayers (in place, omit/skip rules)', () => {
-  it('both enabled → [{…},{…}]', () => {
+  it('both enabled, default wraps → [{…},{…}] with REPEAT omitted', () => {
     const e: any = {};
     writeLayers(e, [L('a.png', 't0'), L('b.png', 't1')]);
+    // Default REPEAT wraps are omitted (canonical form, matches live backgrounds.json).
     expect(e['Detail Layers']).toEqual([
-      { image: 'a.png', texCoord: 't0', wrapX: 'REPEAT', wrapY: 'REPEAT' },
-      { image: 'b.png', texCoord: 't1', wrapX: 'REPEAT', wrapY: 'REPEAT' },
+      { image: 'a.png', texCoord: 't0' },
+      { image: 'b.png', texCoord: 't1' },
     ]);
   });
   it('layer0 off + layer1 on → [{}, {…}]', () => {
@@ -712,7 +713,7 @@ export const glassEnabled = (entry: any): boolean =>
   entry?.['Frosted Glass'] != null && typeof entry['Frosted Glass'] === 'object';
 
 export function setGlass(entry: any, on: boolean): void {
-  if (on) { if (!glassEnabled(entry)) entry['Frosted Glass'] = { blur: 0.5, zoom: 1, opacity: 0 }; }
+  if (on) { if (!glassEnabled(entry)) entry['Frosted Glass'] = { blur: 0, zoom: 1, opacity: 1 }; }
   else delete entry['Frosted Glass'];
 }
 ```
