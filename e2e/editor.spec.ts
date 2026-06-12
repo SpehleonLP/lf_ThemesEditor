@@ -1,22 +1,45 @@
 // e2e/editor.spec.ts
 import { test, expect } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
-import { cp, mkdtemp } from 'node:fs/promises';
+import { cp, mkdtemp, mkdir, readdir, symlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+
+const SRC = '/mnt/Passport/Lifaundi/Gui';
 
 let proc: ChildProcess;
 let root: string;
 
+// Stage a write-isolated mirror of the Gui package. The app only ever SAVES the small top-level
+// .json config files; everything else (images/psds/etc., ~212MB) is read-only. A full recursive
+// byte-copy off the FUSE mount blows past any sane timeout, so instead we recreate the directory
+// tree with real dirs (so /api/list's isDirectory() still reports them correctly), COPY the tiny
+// .json files (saves land here, never on the live package), and SYMLINK every other file (zero-copy
+// read-through to the originals). server.js's jail is purely lexical, so it follows the symlinks.
+async function stageGuiMirror(src: string, dest: string): Promise<void> {
+  await mkdir(dest, { recursive: true });
+  for (const e of await readdir(src, { withFileTypes: true })) {
+    const from = path.join(src, e.name);
+    const to = path.join(dest, e.name);
+    if (e.isDirectory()) await stageGuiMirror(from, to);
+    else if (e.isFile() && e.name.endsWith('.json')) await cp(from, to);
+    else await symlink(from, to);
+  }
+}
+
 test.beforeAll(async () => {
-  test.setTimeout(180_000); // the real Gui dir is ~212MB on a FUSE mount; the recursive copy can be slow
+  test.setTimeout(120_000); // metadata-only walk; fast even on FUSE, but leave headroom
   root = await mkdtemp(path.join(tmpdir(), 'gui-e2e-'));
-  await cp('/mnt/Passport/Lifaundi/Gui', root, { recursive: true });
+  await stageGuiMirror(SRC, root);
   proc = spawn('node', ['server.js', root], { env: { ...process.env, PORT: '8137' } });
   proc.stderr?.on('data', (d) => console.error('[server]', String(d)));
   await new Promise((r) => proc.stdout!.once('data', r));
 });
-test.afterAll(() => proc?.kill());
+test.afterAll(async () => {
+  proc?.kill();
+  // The mirror is symlinks + tiny json copies; removing it never touches the live package.
+  if (root) await rm(root, { recursive: true, force: true }).catch(() => {});
+});
 
 test('shell loads, nav switches surfaces, drawer opens', async ({ page }) => {
   await page.goto('/'); // server serves dist/ — requires `npm run build` first
