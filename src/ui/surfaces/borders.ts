@@ -7,7 +7,7 @@ import { state, notify, subscribe, structuralKey, type Panel } from '../state';
 import { selectBorder } from '../main';
 import { renderBorderList } from '../borderList';
 import { mountCellsPanel, updateCellsPanel } from '../rectEditor';
-import { renderPropertiesForm } from '../propertiesForm';
+import { mountGeometryFields, updateGeometryFields } from '../propertiesForm';
 import { renderPreviewPanel } from '../previewPanel';
 import { renderExportPanel } from '../exportPanel';
 
@@ -55,7 +55,7 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
     const panels: Panel[] = [
       { host: list, mount(h) { renderBorderList(h, (n) => void selectBorder(n)); }, update() { renderBorderList(this.host, (n) => void selectBorder(n)); } },
       { host: editor, mount: mountCellsPanel, update: updateCellsPanel },
-      { host: props, mount(h) { renderPropertiesForm(h); }, update() { renderPropertiesForm(this.host); } },
+      { host: props, mount: mountGeometryFields, update: updateGeometryFields },
       { host: previewHost, mount(h) { renderPreviewPanel(h); }, update() { renderPreviewPanel(this.host); } },
       { host: exportHost, mount(h) { renderExportPanel(h); }, update() { renderExportPanel(this.host); } },
     ];
