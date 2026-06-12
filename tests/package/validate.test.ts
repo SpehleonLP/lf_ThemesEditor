@@ -43,9 +43,12 @@ test('non-additionalProperties schema violation stays an error', async () => {
   expect(issues.some((i) => i.file === 'borders' && i.category === 'schema' && i.severity === 'error')).toBe(true);
 });
 
-test('dangling name reference → error', async () => {
+test('dangling name reference → error with build-error wording', async () => {
   const issues = await run(pkg({ responseCurves: fd({ 'Response Curves': { Button_0: { OnClick: 'Ghost' } }, Events: {} }) }));
-  expect(issues.some((i) => i.category === 'dangling-ref' && i.severity === 'error' && /Ghost/.test(i.message))).toBe(true);
+  const e = issues.find((i) => i.category === 'dangling-ref' && i.severity === 'error' && /Ghost/.test(i.message));
+  expect(e).toBeTruthy();
+  expect(e!.message).toMatch(/build error/i);
+  expect(e!.message).not.toMatch(/silently drop/i);
 });
 
 test('dead entry → notice', async () => {
@@ -66,9 +69,9 @@ test('missing file → notice', async () => {
   expect(issues.some((i) => i.file === 'backgrounds' && i.category === 'missing-file' && i.severity === 'notice')).toBe(true);
 });
 
-test('nonzero timeFactor in a TexCoord → warning', async () => {
-  const issues = await run(pkg({ backgrounds: fd({ TexCoords: { spin: { timeFactor: 0.5 } } }) }));
-  expect(issues.some((i) => i.category === 'texcoord-timefactor' && i.severity === 'warning')).toBe(true);
+test('timeFactor in a TexCoord → no texcoord-timefactor issue emitted', async () => {
+  const issues = await run(pkg({ backgrounds: fd({ TexCoords: { spin: { timeFactor: 5 } } }) }));
+  expect(issues.some((i) => i.category === 'texcoord-timefactor')).toBe(false);
 });
 
 test('loadError file is reported once and not schema-checked', async () => {
@@ -77,6 +80,38 @@ test('loadError file is reported once and not schema-checked', async () => {
   expect(b.length).toBe(1);
   expect(b[0].category).toBe('load-error');
   expect(b[0].severity).toBe('error');
+});
+
+describe('backdrop anyOf schema', () => {
+  test('empty Detail Layers array → schema error on backgrounds', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Backgrounds: { Backdrop_0: { 'Detail Layers': [] } } }) }));
+    expect(issues.some((i) => i.file === 'backgrounds' && i.category === 'schema' && i.severity === 'error')).toBe(true);
+  });
+
+  test('Frosted Glass only backdrop → no schema issue on backgrounds', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Backgrounds: { Backdrop_0: { 'Frosted Glass': {} } } }) }));
+    expect(issues.some((i) => i.file === 'backgrounds' && i.category === 'schema')).toBe(false);
+  });
+});
+
+describe('bg-gradient-marks', () => {
+  test('flags non-ascending gradient marks as an error', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Gradients: { bad: [[0,[0,0,0,1]],[0.8,[1,1,1,1]],[0.3,[1,0,0,1]]] } }) }));
+    const e = issues.find((i) => i.category === 'bg-gradient-marks' && i.severity === 'error');
+    expect(e).toBeTruthy();
+    expect(e!.message).toMatch(/ascending/i);
+  });
+
+  test('warns when a mark t is outside 0..1', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Gradients: { oob: [[0,[0,0,0,1]],[1.5,[1,1,1,1]]] } }) }));
+    const w = issues.find((i) => i.category === 'bg-gradient-marks' && i.severity === 'warning');
+    expect(w).toBeTruthy();
+  });
+
+  test('no bg-gradient-marks issue for a well-formed gradient', async () => {
+    const issues = await run(pkg({ backgrounds: fd({ Gradients: { ok: [[0,[0,0,0,1]],[1,[1,1,1,1]]] } }) }));
+    expect(issues.some((i) => i.category === 'bg-gradient-marks')).toBe(false);
+  });
 });
 
 describe('borders-tessellation-units', () => {

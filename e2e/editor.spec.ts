@@ -288,3 +288,45 @@ test('borders: mask-mode select + Comment field dirty & round-trip', async ({ pa
   await expect(page.locator('select[data-mask="mode"]')).toHaveValue('#OVERLAY');
   await expect(page.locator('input[data-comment="border"]')).toHaveValue('e2e mask + comment test');
 });
+
+test('backgrounds: add backdrop slot → configure layer → dirty → Save', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Backgrounds/ }).click();
+  await page.locator('.bg-tab', { hasText: 'Backdrops' }).click();
+  // add a slot via the + button (auto-fills the first unused name)
+  // Playwright's accept() without an arg returns '' for prompts, so echo the prompt's default value.
+  page.once('dialog', (d) => d.accept(d.defaultValue())); // prompt → default value
+  await page.locator('.bg-el-add').click();
+  // enable layer 0 + enable glass so the entry is valid
+  await page.locator('[data-layer="0"] [data-l="enabled"]').check();
+  await page.locator('[data-g="enabled"]').check();
+  const save = page.getByRole('button', { name: /^Save/ });
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(save).toBeDisabled();
+});
+
+test('backgrounds: gradient stop drag commits once and survives notify', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Backgrounds/ }).click();
+  await page.locator('.bg-tab', { hasText: 'Gradients' }).click();
+  page.once('dialog', (d) => d.accept('rampE2E'));
+  await page.locator('.bg-el-add').click();
+  const bar = page.locator('.bg-grad-bar');
+  const box = await bar.boundingBox();
+  // click empty area to insert a stop, then drag it
+  await page.mouse.click(box!.x + box!.width * 0.5, box!.y + box!.height / 2);
+  await page.mouse.move(box!.x + box!.width * 0.5, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.8, box!.y + box!.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.getByRole('button', { name: /^Save/ })).toBeEnabled();
+});
+
+test('backgrounds: tab switch keeps preview canvas alive', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Backgrounds/ }).click();
+  await expect(page.locator('.bg-pv-canvas')).toBeVisible();
+  await page.locator('.bg-tab', { hasText: 'Lights' }).click();
+  await expect(page.locator('.bg-pv-canvas')).toBeVisible(); // preview persists across tabs
+});

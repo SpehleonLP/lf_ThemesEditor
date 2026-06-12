@@ -3,6 +3,7 @@ import Ajv, { type ValidateFunction } from 'ajv';
 import type { PackageDoc, FileKey } from './model';
 import type { RefIndex, Namespace } from './refIndex';
 import type { AssetList } from './assets';
+import { marksAscending } from '../bg/gradients';
 
 export type Severity = 'error' | 'warning' | 'notice';
 
@@ -10,7 +11,7 @@ export interface NavTarget { surface: FileKey | 'assets'; entry?: { ns?: Namespa
 
 export interface Issue {
   severity: Severity;
-  category: string; // 'schema' | 'dangling-ref' | 'dead-entry' | 'asset' | 'missing-file' | 'texcoord-timefactor' | 'load-error'
+  category: string; // 'schema' | 'dangling-ref' | 'dead-entry' | 'asset' | 'missing-file' | 'load-error'
   message: string;
   file: FileKey | 'assets';
   jsonPath?: (string | number)[];
@@ -70,7 +71,7 @@ const danglingValidator: Validator = (_pkg, index) =>
   index.dangling().map((e) => ({
     severity: 'error' as const,
     category: 'dangling-ref',
-    message: `${NS_LABEL[e.to.ns]} "${e.to.name}" is referenced but not defined — the build will silently drop this.`,
+    message: `${NS_LABEL[e.to.ns]} "${e.to.name}" is referenced but not defined — this is a build error (the packer's GetIndex fails on the missing name).`,
     file: e.from.file,
     jsonPath: e.from.jsonPath,
     nav: { surface: e.from.file, entry: { ns: e.to.ns, name: e.to.name } },
@@ -105,21 +106,6 @@ const assetsValidator: Validator = (_pkg, _index, assets) => {
       out.push({ severity: 'error', category: 'asset', message: `"${a.path}" uses rejected format .${a.ext} — the engine refuses it.`, file: 'assets', nav: { surface: 'assets' } });
     } else if (a.status === 'unreferenced') {
       out.push({ severity: 'notice', category: 'asset', message: `"${a.path}" is an eligible ${a.kind} but is unreferenced — it won't be packed.`, file: 'assets', nav: { surface: 'assets' } });
-    }
-  }
-  return out;
-};
-
-// 5. texcoord-timefactor — nonzero timeFactor is a known shader int/float bug.
-const timeFactorValidator: Validator = (pkg) => {
-  const out: Issue[] = [];
-  const tc = pkg.files.backgrounds.root?.TexCoords;
-  if (tc && typeof tc === 'object') {
-    for (const name of Object.keys(tc)) {
-      const v = tc[name]?.timeFactor;
-      if (typeof v === 'number' && v !== 0) {
-        out.push({ severity: 'warning', category: 'texcoord-timefactor', message: `TexCoord "${name}" has timeFactor ${v} — only 0 is reliable (shader int/float bug).`, file: 'backgrounds', jsonPath: ['TexCoords', name, 'timeFactor'], nav: { surface: 'backgrounds', entry: { ns: 'bg:texcoords', name } } });
-      }
     }
   }
   return out;
@@ -164,7 +150,39 @@ const bordersTessUnitsValidator: Validator = (pkg) => {
   return out;
 };
 
-const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, timeFactorValidator, bordersTessUnitsValidator];
+// 7. bg-gradient-marks — non-ascending marks crash the bake; out-of-range t is dead/misleading.
+const bgGradientMarksValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const grads = pkg.files.backgrounds.root?.Gradients;
+  if (!grads || typeof grads !== 'object') return out;
+  for (const name of Object.keys(grads)) {
+    const marks = grads[name];
+    if (!Array.isArray(marks)) continue;
+    const ts = marks.map((m: any) => (Array.isArray(m) ? m[0] : NaN)) as number[];
+    const parsed = marks
+      .filter((m: any) => Array.isArray(m) && typeof m[0] === 'number')
+      .map((m: any) => [m[0], m[1]] as [number, [number, number, number, number]]);
+    if (!marksAscending(parsed)) {
+      out.push({
+        severity: 'error', category: 'bg-gradient-marks',
+        message: `Gradient "${name}" has marks that are not in ascending order — the builder's bake loop reads past the end of the marks and can crash the build (the engine's own check misses it).`,
+        file: 'backgrounds', jsonPath: ['Gradients', name],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:gradients', name } },
+      });
+    }
+    if (ts.some((t) => t < 0 || t > 1)) {
+      out.push({
+        severity: 'warning', category: 'bg-gradient-marks',
+        message: `Gradient "${name}" has a mark t outside 0..1 — ends are auto-extended, so out-of-range marks are dead or misleading.`,
+        file: 'backgrounds', jsonPath: ['Gradients', name],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:gradients', name } },
+      });
+    }
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator];
 
 export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
   return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));
