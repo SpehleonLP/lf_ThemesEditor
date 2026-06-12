@@ -12,13 +12,12 @@ export interface RcState {
   loop: boolean;
   trigger: Trigger | null;
   structuralNonce: number;
-  rev: number; // bump to force plot/preview redraw without a re-mount
 }
 
 export const rcState: RcState = {
   tab: 'curves',
   selected: { curves: null, events: null, splines1d: null, splines2d: null, gradients: null, sounds: null },
-  playing: false, scrubSeconds: 0, loop: true, trigger: null, structuralNonce: 0, rev: 0,
+  playing: false, scrubSeconds: 0, loop: true, trigger: null, structuralNonce: 0,
 };
 
 type Listener = () => void;
@@ -38,7 +37,6 @@ export function rcStructuralKey(): string {
   return [rcState.tab, rcState.selected[rcState.tab] ?? '', String(rcState.structuralNonce)].join('|');
 }
 export function bumpRcStructural(): void { rcState.structuralNonce++; }
-export function bumpRcRev(): void { rcState.rev++; rcNotify(); }
 
 export function selectRcTab(tab: RcTab): void { if (rcState.tab === tab) return; rcState.tab = tab; rcNotify(); }
 export function selectRcEntry(tab: RcTab, name: string | null): void {

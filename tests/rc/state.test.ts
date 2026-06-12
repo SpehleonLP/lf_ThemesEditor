@@ -9,7 +9,7 @@ beforeEach(() => {
   rcState.tab = 'curves';
   rcState.selected = { curves: null, events: null, splines1d: null, splines2d: null, gradients: null, sounds: null };
   rcState.playing = false; rcState.scrubSeconds = 0; rcState.loop = true;
-  rcState.trigger = null; rcState.structuralNonce = 0; rcState.rev = 0;
+  rcState.trigger = null; rcState.structuralNonce = 0;
 });
 
 describe('rc/state', () => {
