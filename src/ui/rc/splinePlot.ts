@@ -14,6 +14,10 @@ const TRACE_COLORS = ['#6cf', '#f96'];
 
 export function createSplinePlot(host: HTMLElement, opts: SplinePlotOpts): { update(): void } {
   host.replaceChildren(); host.className = 'rc-plot';
+  // The editor host is shared across RC tabs; the form mounts (curve/event/sound) hide it via an
+  // inline display:none when nothing is selected. The plot always wants to be visible, so clear
+  // that stale inline style instead of inheriting a leaked display:none from a prior tab.
+  host.style.display = '';
   host.innerHTML = `
     <canvas data-c="plot" width="${W}" height="${H}" class="rc-plot-canvas"></canvas>
     <div class="rc-plot-marks" data-marks></div>`;

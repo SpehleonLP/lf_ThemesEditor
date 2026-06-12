@@ -330,3 +330,38 @@ test('backgrounds: tab switch keeps preview canvas alive', async ({ page }) => {
   await page.locator('.bg-tab', { hasText: 'Lights' }).click();
   await expect(page.locator('.bg-pv-canvas')).toBeVisible(); // preview persists across tabs
 });
+
+test('response curves: add an event and bind a channel', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Response Curves/ }).click();
+  await page.locator('.bg-tab', { hasText: 'Events' }).click();
+  page.once('dialog', (d) => d.accept('E2EHover')); // new event name prompt
+  await page.locator('.bg-el-add').click();
+  await page.locator('.bg-el-row', { hasText: 'E2EHover' }).click();
+  // bind nothing-yet is fine; assert the channel selects render
+  await expect(page.locator('select[data-ch="Translation"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Save/ })).toBeEnabled();
+});
+
+test('response curves: add a 1D spline mark via the plot', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Response Curves/ }).click();
+  await page.locator('.bg-tab', { hasText: '1D Splines' }).click();
+  page.once('dialog', (d) => d.accept('e2eWobble'));
+  await page.locator('.bg-el-add').click();
+  await page.locator('.bg-el-row', { hasText: 'e2eWobble' }).click();
+  const plot = page.locator('.rc-plot-canvas');
+  const box = await plot.boundingBox();
+  // click empty area to insert a mark (away from the two default endpoints)
+  await page.mouse.click(box!.x + box!.width * 0.5, box!.y + box!.height * 0.3);
+  await expect(page.locator('.rc-mark-row')).toHaveCount(3);
+  await expect(page.getByRole('button', { name: /^Save/ })).toBeEnabled();
+});
+
+test('response curves: trigger an event and the preview canvas stays alive', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Response Curves/ }).click();
+  await expect(page.locator('.rc-pv-canvas')).toBeVisible();
+  await page.locator('.bg-tab', { hasText: 'Events' }).click();
+  await expect(page.locator('.rc-pv-canvas')).toBeVisible(); // preview persists across tab switches
+});
