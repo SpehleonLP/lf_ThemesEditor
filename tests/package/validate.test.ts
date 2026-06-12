@@ -43,9 +43,12 @@ test('non-additionalProperties schema violation stays an error', async () => {
   expect(issues.some((i) => i.file === 'borders' && i.category === 'schema' && i.severity === 'error')).toBe(true);
 });
 
-test('dangling name reference → error', async () => {
+test('dangling name reference → error with build-error wording', async () => {
   const issues = await run(pkg({ responseCurves: fd({ 'Response Curves': { Button_0: { OnClick: 'Ghost' } }, Events: {} }) }));
-  expect(issues.some((i) => i.category === 'dangling-ref' && i.severity === 'error' && /Ghost/.test(i.message))).toBe(true);
+  const e = issues.find((i) => i.category === 'dangling-ref' && i.severity === 'error' && /Ghost/.test(i.message));
+  expect(e).toBeTruthy();
+  expect(e!.message).toMatch(/build error/i);
+  expect(e!.message).not.toMatch(/silently drop/i);
 });
 
 test('dead entry → notice', async () => {
@@ -66,9 +69,9 @@ test('missing file → notice', async () => {
   expect(issues.some((i) => i.file === 'backgrounds' && i.category === 'missing-file' && i.severity === 'notice')).toBe(true);
 });
 
-test('nonzero timeFactor in a TexCoord → warning', async () => {
-  const issues = await run(pkg({ backgrounds: fd({ TexCoords: { spin: { timeFactor: 0.5 } } }) }));
-  expect(issues.some((i) => i.category === 'texcoord-timefactor' && i.severity === 'warning')).toBe(true);
+test('timeFactor in a TexCoord → no texcoord-timefactor issue emitted', async () => {
+  const issues = await run(pkg({ backgrounds: fd({ TexCoords: { spin: { timeFactor: 5 } } }) }));
+  expect(issues.some((i) => i.category === 'texcoord-timefactor')).toBe(false);
 });
 
 test('loadError file is reported once and not schema-checked', async () => {
