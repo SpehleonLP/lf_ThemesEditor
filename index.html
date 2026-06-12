@@ -75,6 +75,11 @@
     .cm-glyphs { pointer-events: none; }
     .bs-bottom-bar { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 16px; padding: 8px; border-top: 1px solid #2a2a33; overflow: auto; }
     .bs-geometry, .bs-fillmask { min-width: 0; }
+    .pf-zone { border: 1px solid #2a2a33; border-radius: 4px; padding: 6px 8px; margin: 0; display: grid; gap: 4px; }
+    .pf-zone > legend { padding: 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
+    .pf-zone label { display: block; font-size: 12px; }
+    .pf-zone input[type="text"], .pf-zone select { background: #23232b; color: #cfcfcf; border: 1px solid #2a2a33; border-radius: 3px; }
+    .pf-zone input[type="text"]:disabled { opacity: .45; }
     .ro-surface, .as-surface { display: grid; grid-template-columns: 1fr 320px; height: 100%; }
     .ro-list, .as-main { overflow: auto; border-right: 1px solid #2a2a33; }
     .ro-inspector { overflow: auto; padding: 10px; }

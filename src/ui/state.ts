@@ -40,7 +40,14 @@ export interface Panel { host: HTMLElement; mount(host: HTMLElement): void; upda
 // add/remove happens (or the linked flag toggles), and stays the same for plain value edits.
 // `layers` is a fixed Record<'mask'|'overlay', ...> | null, so its structure is captured by
 // which layer keys are present (vs the whole object being null).
+// A monotonically-increasing nonce that callers bump to force a structural remount even when
+// nothing in structuralKey()'s other terms changed. Needed for mask-mode switches: the layers
+// Record always has both 'mask','overlay' keys, so layerKeys never moves — but switching mask
+// mode changes the mask layer's image/cells/copy semantics and must remount every panel.
+let structuralNonce = 0;
+export function bumpStructural(): void { structuralNonce++; }
+
 export function structuralKey(): string {
   const layerKeys = state.layers ? Object.keys(state.layers).join(',') : '';
-  return [state.selected, state.activeLayer, layerKeys, state.linked].join('|');
+  return [state.selected, state.activeLayer, layerKeys, state.linked, String(structuralNonce)].join('|');
 }

@@ -255,3 +255,36 @@ test('borders: slot list add/delete + shared-sheet badge', async ({ page }) => {
   await newRow.locator('.sl-del').click();
   await expect(newRow).toHaveCount(0);
 });
+
+test('borders: mask-mode select + Comment field dirty & round-trip', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto('/');
+  await expect(page.locator('.borders-surface')).toBeVisible();
+
+  // Select Window_0.
+  await page.locator('.bs-slots div', { hasText: /^Window_0$/ }).click();
+  const saveBtn = page.locator('.tb-btn', { hasText: 'Save' });
+  await expect(saveBtn).toBeDisabled();
+
+  // (a) Change the Mask mode to #OVERLAY -> entry mutates, structural remount fires, Save enables.
+  const maskSel = page.locator('select[data-mask="mode"]');
+  await expect(maskSel).toBeVisible();
+  await maskSel.selectOption('#OVERLAY');
+  await expect(saveBtn).toBeEnabled();
+  // The select reflects the chosen mode after the remount (focus-preserving update re-reads entry).
+  await expect(maskSel).toHaveValue('#OVERLAY');
+
+  // (b) Type into the border Comment field — Save stays enabled, no new validation notice.
+  const comment = page.locator('input[data-comment="border"]');
+  await comment.fill('e2e mask + comment test');
+  await expect(saveBtn).toBeEnabled();
+
+  // (c) Save, then reload from the (saved) mirror JSON and confirm both round-trip.
+  await saveBtn.click();
+  await expect(saveBtn).toBeDisabled();
+  await page.reload();
+  await expect(page.locator('.borders-surface')).toBeVisible();
+  await page.locator('.bs-slots div', { hasText: /^Window_0$/ }).click();
+  await expect(page.locator('select[data-mask="mode"]')).toHaveValue('#OVERLAY');
+  await expect(page.locator('input[data-comment="border"]')).toHaveValue('e2e mask + comment test');
+});
