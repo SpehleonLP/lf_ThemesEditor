@@ -25,6 +25,24 @@ test('classifies eligible / rejected / other and resolves edges', () => {
   expect(list.exists('Images/gone.png')).toBe(false);
 });
 
+test('flags referenced files whose extension the engine cannot load', () => {
+  const edges = [edge('asset:image', 'Images/foo.psd')];
+  const list = classifyAssets([{ path: 'Images/foo.psd' }], edges);
+  expect(list.wrongFormat).toEqual([{ name: 'Images/foo.psd', kind: 'image', ext: 'psd' }]);
+});
+
+test('referenced on-disk rejected formats are not double-reported as wrongFormat', () => {
+  // .webp has a dedicated rejected-format channel; it must NOT also surface in wrongFormat.
+  const list = classifyAssets([{ path: 'Images/foo.webp' }], [edge('asset:image', 'Images/foo.webp')]);
+  expect(list.wrongFormat).toEqual([]);
+  expect(list.images.find((a) => a.path === 'Images/foo.webp')!.status).toBe('rejected-format');
+});
+
+test('eligible referenced files are not flagged as wrong format', () => {
+  const list = classifyAssets([{ path: 'Images/foo.png' }], [edge('asset:image', 'Images/foo.png')]);
+  expect(list.wrongFormat).toEqual([]);
+});
+
 test('fetchAssetList lists Images/Sounds plus every referenced directory', async () => {
   const seen: string[] = [];
   const listDir = async (dir: string) => {

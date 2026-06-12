@@ -101,6 +101,9 @@ const assetsValidator: Validator = (_pkg, _index, assets) => {
   for (const m of assets.missing) {
     out.push({ severity: 'error', category: 'asset', message: `Referenced ${m.kind} "${m.name}" is missing on disk — the build will silently drop it.`, file: 'assets', nav: { surface: 'assets' } });
   }
+  for (const w of assets.wrongFormat) {
+    out.push({ severity: 'error', category: 'asset', message: `Referenced ${w.kind} "${w.name}" is a .${w.ext} — the engine only loads ${w.kind === 'image' ? 'png/jpg/jpeg/bmp' : 'wav/flac/ogg'}. Export it to a supported format.`, file: 'assets', nav: { surface: 'assets' } });
+  }
   for (const a of [...assets.images, ...assets.sounds]) {
     if (a.status === 'rejected-format') {
       out.push({ severity: 'error', category: 'asset', message: `"${a.path}" uses rejected format .${a.ext} — the engine refuses it.`, file: 'assets', nav: { surface: 'assets' } });

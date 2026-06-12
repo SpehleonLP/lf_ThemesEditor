@@ -13,11 +13,13 @@ export type AssetKind = 'image' | 'sound';
 
 export interface AssetEntry { path: string; ext: string; kind: AssetKind; status: AssetStatus; consumers: number }
 export interface MissingRef { name: string; kind: AssetKind }
+export interface WrongFormatRef { name: string; kind: AssetKind; ext: string }
 
 export interface AssetList {
   images: AssetEntry[];
   sounds: AssetEntry[];
   missing: MissingRef[];        // referenced paths not present on disk
+  wrongFormat: WrongFormatRef[]; // referenced + on disk, but the engine can't load the format
   exists(path: string): boolean;
 }
 
@@ -48,14 +50,18 @@ export function classifyAssets(disk: DiskFile[], edges: RefEdge[]): AssetList {
   }
 
   const missing: MissingRef[] = [];
+  const wrongFormat: WrongFormatRef[] = [];
   for (const ns of ['asset:image', 'asset:sound'] as const) {
     const kind: AssetKind = ns === 'asset:image' ? 'image' : 'sound';
+    const eligible = ns === 'asset:image' ? IMAGE_ELIGIBLE : SOUND_ELIGIBLE;
+    const rejected = ns === 'asset:image' ? IMAGE_REJECTED : SOUND_REJECTED;
     for (const name of new Set(edges.filter((e) => e.to.ns === ns).map((e) => e.to.name))) {
       if (!present.has(name)) missing.push({ name, kind });
+      else if (!eligible.has(ext(name)) && !rejected.has(ext(name))) wrongFormat.push({ name, kind, ext: ext(name) });
     }
   }
 
-  return { images, sounds, missing, exists: (path) => present.has(path) };
+  return { images, sounds, missing, wrongFormat, exists: (path) => present.has(path) };
 }
 
 export type ListDir = (dir: string) => Promise<{ name: string; dir: boolean }[]>;
