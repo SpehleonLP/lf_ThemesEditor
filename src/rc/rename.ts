@@ -17,8 +17,8 @@ export function renameRcEntry(pkg: PackageDoc, index: RefIndex, ns: Namespace, o
   if (newName === oldName) return;
   const root = pkg.files.responseCurves.root;
   const table = root?.[tableKey];
-  if (!table || !(oldName in table)) throw new Error(`renameRcEntry: "${oldName}" not in ${tableKey}`);
-  if (newName in table) throw new Error(`renameRcEntry: "${newName}" already exists in ${tableKey}`);
+  if (!table || !Object.hasOwn(table, oldName)) throw new Error(`renameRcEntry: "${oldName}" not in ${tableKey}`);
+  if (Object.hasOwn(table, newName)) throw new Error(`renameRcEntry: "${newName}" already exists in ${tableKey}`);
 
   // Rewrite consumers first (they live in the same file root).
   for (const edge of index.consumers(ns, oldName)) {

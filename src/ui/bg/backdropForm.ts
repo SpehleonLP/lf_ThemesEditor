@@ -71,7 +71,7 @@ export function mountBackdropForm(host: HTMLElement, deps: BgFormDeps): void {
   host.querySelectorAll('[data-l="tcNew"]').forEach((b, i) => b.addEventListener('click', () => {
     const name = prompt('New TexCoord name:'); if (!name) return;
     const tcs = (_deps!.file.root.TexCoords ??= {});
-    if (!(name in tcs)) tcs[name] = {};
+    if (!Object.hasOwn(tcs, name)) tcs[name] = {};
     const entry = entryOf(); const layers = readLayers(entry); layers[i].texCoord = name; layers[i].enabled = true;
     writeLayers(entry, layers); commit();
   }));

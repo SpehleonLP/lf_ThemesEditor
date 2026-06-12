@@ -39,11 +39,11 @@ export function createResponseCurvesSurface(rcFile: FileDoc, onDirty: () => void
       const idx = prompt('Index 0–3 (archetypes), or a number for _N / N:', '0'); if (idx === null) return;
       const key = ARCHETYPES.includes(arch) ? `${arch}_${idx}` : arch.startsWith('_') ? arch : `_${idx}`;
       if (!/^((GridItem|ListItem|Button|Action|Affordance|Window|Progress|Toggle|Bounce)_[0-3]|_[0-9]+|[0-9]+)$/.test(key)) { alert(`Invalid curve key "${key}".`); return; }
-      if (key in table) { alert('Already exists.'); return; }
+      if (Object.hasOwn(table, key)) { alert('Already exists.'); return; }
       table[key] = {}; selectRcEntry('curves', key);
     } else {
       const name = prompt(`New ${tab} name:`); if (!name) return;
-      if (name in table) { alert('Name already exists.'); return; }
+      if (Object.hasOwn(table, name)) { alert('Name already exists.'); return; }
       table[name] = defaultEntry(tab); selectRcEntry(tab, name);
     }
     markDirty();
@@ -74,7 +74,7 @@ export function createResponseCurvesSurface(rcFile: FileDoc, onDirty: () => void
     const ns = RC_TAB_NS[tab]; if (!ns) return; // curves not renamable
     const next = prompt(`Rename "${name}" to:`, name); if (!next || next === name) return;
     const table = rcFile.root[RC_TAB_TABLE[tab]];
-    if (next in (table ?? {})) { alert('Name already exists.'); return; }
+    if (Object.hasOwn(table ?? {}, next)) { alert('Name already exists.'); return; }
     renameRcEntry(lastCtx!.pkg, lastCtx!.index, ns, name, next);
     selectRcEntry(tab, next);
     markDirty();
