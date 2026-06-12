@@ -1,6 +1,7 @@
 import { PreviewRenderer, type PreviewInput, type PreviewLayer } from '../preview/renderer';
 import { state, type LayerName } from './state';
 import type { FillMode, Vec4 } from '../types';
+import { readMaskMode } from '../maskMode';
 
 let renderer: PreviewRenderer | null = null;
 let panel: [number, number] = [240, 160];
@@ -44,6 +45,8 @@ export function renderPreviewPanel(host: HTMLElement): void {
     ['#pv-w', '#pv-h', '#pv-og'].forEach((s) => { (host.querySelector(s) as HTMLInputElement).onchange = rerun; });
   }
   const entry = state.doc.root[state.selected];
+  const mm = readMaskMode(entry);
+  const maskMode: 0 | 1 | 2 = mm === 'none' ? 0 : mm === '#OVERLAY' ? 2 : 1;
   const input: PreviewInput = {
     mask: layerInput('mask'),
     overlay: layerInput('overlay'),
@@ -51,6 +54,8 @@ export function renderPreviewPanel(host: HTMLElement): void {
     centerTile: (entry.CenterTile ?? [1, 1, -1, -1]) as Vec4,
     panelSize: panel,
     showOverlayRegion,
+    maskMode,
+    expansion: (entry.Expansion ?? [0, 0, 0, 0]) as Vec4,
   };
   try { renderer!.render(input); } catch (e) { console.error('preview:', e); }
 }

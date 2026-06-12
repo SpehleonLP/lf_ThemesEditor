@@ -16,12 +16,13 @@ void main() {
 //  - cell index clamped to 4 (engine clamps to 5 and reads out of bounds on exact far-edge fragments);
 //  - the mask.g "overlay" region renders as a tint toggle instead of the engine's separate overlay pass;
 //  - detail/light/glass content behind the border is a flat u_content color.
+//  - u_maskMode: 0=none→mask(1,0), 1=texture, 2=#OVERLAY→mask(0,1) (replaces old u_hasMask bool).
 export const FRAG = `#version 300 es
 precision highp float;
 
 uniform sampler2D u_maskTex;
 uniform sampler2D u_overlayTex;
-uniform bool u_hasMask;
+uniform int u_maskMode; // 0 none, 1 texture, 2 overlay
 uniform bool u_hasOverlay;
 uniform vec4 u_maskCells[25];    // |normalized| rects, unorm16-quantized
 uniform vec4 u_overlayCells[25];
@@ -102,11 +103,14 @@ void main() {
   vec2 cellPt = cellSizePt(cell);
 
   // SampleBorder (frag:152-184): defaults mask=(1,0), overlay=0
+  // u_maskMode: 0 none -> mask=(1,0); 1 texture; 2 overlay -> mask=(0,1)
   vec2 mask = vec2(1.0, 0.0);
-  if (u_hasMask) {
+  if (u_maskMode == 1) {
     vec2 mc = layerCoords(u_maskCells[idx], u_maskMirror[idx], u_maskFill, u_maskTexSize, coords, centerX, centerY, cellPt);
     vec2 mg = texture(u_maskTex, mc).rg;
     mask = vec2(smoothstep(0.48, 0.52, mg.r), 1.0 - mg.g);
+  } else if (u_maskMode == 2) {
+    mask = vec2(0.0, 1.0); // overlay masks itself
   }
   vec4 border = vec4(0.0);
   if (u_hasOverlay) {
