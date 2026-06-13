@@ -293,10 +293,10 @@ test('backgrounds: add backdrop slot → configure layer → dirty → Save', as
   await page.goto('/');
   await page.getByRole('button', { name: /Backgrounds/ }).click();
   await page.locator('.bg-tab', { hasText: 'Backdrops' }).click();
-  // add a slot via the + button (auto-fills the first unused name)
-  // Playwright's accept() without an arg returns '' for prompts, so echo the prompt's default value.
-  page.once('dialog', (d) => d.accept(d.defaultValue())); // prompt → default value
+  // add a slot via the + button → pick the first offered slot from the dropdown dialog
   await page.locator('.bg-el-add').click();
+  await page.locator('.picker-dialog select').first().selectOption({ index: 0 });
+  await page.locator('.picker-dialog button', { hasText: 'Add' }).click();
   // enable layer 0 + enable glass so the entry is valid
   await page.locator('[data-layer="0"] [data-l="enabled"]').check();
   await page.locator('[data-g="enabled"]').check();
@@ -329,6 +329,24 @@ test('backgrounds: tab switch keeps preview canvas alive', async ({ page }) => {
   await expect(page.locator('.bg-pv-canvas')).toBeVisible();
   await page.locator('.bg-tab', { hasText: 'Lights' }).click();
   await expect(page.locator('.bg-pv-canvas')).toBeVisible(); // preview persists across tabs
+});
+
+test('backgrounds: away→back resumes the playing preview loop', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /Backgrounds/ }).click();
+  const canvas = page.locator('.bg-pv-canvas');
+  await expect(canvas).toBeVisible();
+  // Preview mounts playing (⏸). Switch AWAY (loop suspends on the hidden host) then BACK.
+  await page.locator('.nav-row[data-surface="borders"]').click();
+  await expect(page.locator('.borders-surface')).toBeVisible();
+  await page.getByRole('button', { name: /Backgrounds/ }).click();
+  await expect(canvas).toBeVisible();
+  // frame() publishes data-frame, ticking once per rendered (visible) frame. If the rAF loop
+  // re-armed on re-activation the counter keeps climbing; the frozen-until-edit regression would
+  // leave it stuck. Content-independent, so it holds even where WebGL2 is unavailable.
+  const frameCount = () => canvas.evaluate((c: HTMLCanvasElement) => Number(c.dataset.frame) || 0);
+  const start = await frameCount();
+  await expect.poll(frameCount, { timeout: 4000 }).toBeGreaterThan(start);
 });
 
 test('response curves: add an event and bind a channel', async ({ page }) => {

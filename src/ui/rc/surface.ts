@@ -16,6 +16,7 @@ import { mountRcGradientForm, updateRcGradientForm } from './gradientForm';
 import { mountRcPreview, updateRcPreview } from './previewPanel';
 import type { RcFormDeps, RcPreviewDeps } from './types';
 import type { AnyMark } from '../../rc/spline';
+import { pickFrom } from '../pickerDialog';
 
 const TABS: { id: RcTab; label: string }[] = [
   { id: 'curves', label: 'Curves' }, { id: 'events', label: 'Events' },
@@ -35,15 +36,20 @@ export function createResponseCurvesSurface(rcFile: FileDoc, onDirty: () => void
   function addEntry(): void {
     const tab = rcState.tab; const table = ensure(tab);
     if (tab === 'curves') {
-      const arch = prompt(`Archetype (${ARCHETYPES.join(', ')}), or _N / N:`, 'Button'); if (!arch) return;
-      const idx = prompt('Index 0–3 (archetypes), or a number for _N / N:', '0'); if (idx === null) return;
-      const key = ARCHETYPES.includes(arch) ? `${arch}_${idx}` : arch.startsWith('_') ? arch : `_${idx}`;
-      if (!/^((GridItem|ListItem|Button|Action|Affordance|Window|Progress|Toggle|Bounce)_[0-3]|_[0-9]+|[0-9]+)$/.test(key)) { alert(`Invalid curve key "${key}".`); return; }
-      if (key in table) { alert('Already exists.'); return; }
-      table[key] = {}; selectRcEntry('curves', key);
+      void pickFrom('Add response curve', [
+        { label: 'Archetype', options: ARCHETYPES },
+        { label: 'Index', options: ['0', '1', '2', '3'] },
+      ]).then((picked) => {
+        if (!picked) return;
+        const key = `${picked[0]}_${picked[1]}`;
+        if (Object.hasOwn(table, key)) { alert('Already exists.'); return; }
+        table[key] = {}; selectRcEntry('curves', key);
+        markDirty();
+      });
+      return;
     } else {
       const name = prompt(`New ${tab} name:`); if (!name) return;
-      if (name in table) { alert('Name already exists.'); return; }
+      if (Object.hasOwn(table, name)) { alert('Name already exists.'); return; }
       table[name] = defaultEntry(tab); selectRcEntry(tab, name);
     }
     markDirty();
@@ -74,7 +80,7 @@ export function createResponseCurvesSurface(rcFile: FileDoc, onDirty: () => void
     const ns = RC_TAB_NS[tab]; if (!ns) return; // curves not renamable
     const next = prompt(`Rename "${name}" to:`, name); if (!next || next === name) return;
     const table = rcFile.root[RC_TAB_TABLE[tab]];
-    if (next in (table ?? {})) { alert('Name already exists.'); return; }
+    if (Object.hasOwn(table ?? {}, next)) { alert('Name already exists.'); return; }
     renameRcEntry(lastCtx!.pkg, lastCtx!.index, ns, name, next);
     selectRcEntry(tab, next);
     markDirty();
@@ -122,7 +128,11 @@ export function createResponseCurvesSurface(rcFile: FileDoc, onDirty: () => void
     if (tab === 'curves') mountCurveForm(editorHost, formDeps());
     else if (tab === 'events') mountEventForm(editorHost, formDeps());
     else if (tab === 'sounds') mountSoundForm(editorHost, formDeps());
-    else if (tab === 'gradients') mountRcGradientForm(editorHost, formDeps());
+    else if (tab === 'gradients') {
+      const sel = rcState.selected.gradients;
+      if (sel) setTrigger({ kind: 'gradient', name: sel });
+      mountRcGradientForm(editorHost, formDeps());
+    }
     else {
       const d = splineMarksDeps(tab as 'splines1d' | 'splines2d');
       const sel = rcState.selected[tab];

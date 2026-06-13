@@ -70,6 +70,9 @@ preview consumer makes the cost real:
   `(canvasW - gutter) × (canvasH - gutter)`, or pad all sides and accept the packing-efficiency cost.
   The packer API itself is correct (20k-case stress: all placements aligned, in-bounds, non-overlapping
   padded footprints); this is a consumer-side decision, not a packer bug.
+  **CLOSED in `2470d90`** (`fix(pack): reserve trailing-edge gutter on the canvas`): the consumer now
+  packs into the shrunk canvas (`canvasW - gutter`, `canvasH - gutter`) so right/bottom-edge sprites
+  also get a full gutter on all four sides.
 
 ## Packer (Task 14) — note for Task 15 export consumer
 
@@ -103,6 +106,10 @@ Decide explicitly per item: wire it, or accept the gap.
   Spec §4.3 promised "border list … with new-border with validated name." The validator exists and is
   tested, but nothing in the app creates a border. To close: a small new-border modal (name field →
   `isValidBorderName` → insert empty entry into `state.doc.root`).
+  **CLOSED (pre-existing, not this branch).** `isValidBorderName` is now consumed in the slot-list
+  add-name path: `src/ui/slotList.ts:128` (`if (!state.doc || !isValidBorderName(name)) return;`),
+  imported at `slotList.ts:13`. The dropdown-driven slot add (commit `1bdbdb5`) routes new names
+  through it before inserting.
 - **`getEditorMeta`/`setEditorMeta` (src/document.ts:23-29) are never called; `Editor` metadata is
   write-only.** `applyPackResult` writes `entry.Editor` (source image + source-space cells + pack
   settings), but `selectBorder` (src/ui/main.ts) always loads a border from its **packed sheet** cells,
@@ -111,6 +118,12 @@ Decide explicitly per item: wire it, or accept the gap.
   border to re-pack-from-original-source is not wired. To close: an Editor read-back path in
   `selectBorder` that, when `entry.Editor` is present, restores the source image + source-space cells
   instead of the packed cells.
+  **CLOSED (pre-existing, not this branch).** The read-back path now exists: `src/editorReadback.ts`
+  (`editorSourceCells(entry)` → `getEditorMeta` + `unflattenCells`) and `selectBorder` consumes it at
+  `src/ui/main.ts:102` — when `entry.Editor` is present it reopens from SOURCE space (source image +
+  source-space cells + authored `linked` flag), falling back to the packed sheet only when there is no
+  Editor meta or the source image fails to load. The re-edit loop (pack writes Editor → re-select
+  rebuilds source layers) is wired in both directions. `getEditorMeta` is no longer write-only.
 
 ## File-server symlink jail caveat (server.js:18-25, final review minor)
 
@@ -120,3 +133,47 @@ Decide explicitly per item: wire it, or accept the gap.
   Low risk for a 127.0.0.1-bound dev tool over a trusted asset tree, and arguably out of scope, but
   the one real jail gap. Harden (if wanted) with `fs.realpath` on the resolved path + re-check the
   prefix. Server bind is confirmed 127.0.0.1-only.
+
+## Newly-recorded debt (bugfix-and-polish branch review, 2026-06-12)
+
+Found while landing this branch's fixes. None blocking for a single-user dev tool, but honestly logged.
+
+- **`atomicWrite` uses a fixed `.tmp` temp name (server.js:30).** `const tmp = abs + '.tmp'` — two
+  concurrent PUTs to the same path race on the same temp file (one's `open('w')`/`writeFile`/`rename`
+  interleaves with the other's), so the surviving file can be a torn mix or the loser's `unlink` can
+  delete the winner's temp mid-flight. Harmless for a single-user dev tool (no concurrent writers to
+  one path in practice), but a real race. Fix with a unique suffix (`abs + '.' + process.pid + '.' +
+  randomUUID() + '.tmp'`) so each write gets its own temp.
+- **`BordersDoc`/`FileDoc` dual-model dirty-sync (src/ui/surfaces/borders.ts) is still the most fragile
+  coupling.** The surface keeps a `BordersDoc`-shaped editing model while Save/export operate on a
+  `FileDoc`; keeping their dirty/serialized state in sync is the trickiest invariant in the app.
+  **Partially mitigated** by `38e3294` (`refactor(borders): single serialization path`): exportPanel
+  and Save now share one `FileDoc` via `state.file` (set at `borders.ts:59`, the surface receives it as
+  `bordersFile: FileDoc`), so there is one serialization path (detected-indent) instead of two. The
+  dual-model coupling itself remains — the surface still bridges two shapes — it's just no longer
+  double-serializing.
+- **Border-name enum is encoded in three independent places with no drift checker.** (1) `PATTERNS` in
+  `src/borderNames.ts:1` (the regex list `isValidBorderName` tests against), (2) `allBorderNames()` in
+  `src/borderNames.ts:14` (which enumerates the full slot list — must stay in lockstep with PATTERNS by
+  hand), and (3) the schema's root `patternProperties` in
+  `/mnt/Passport/Lifaundi/Gui/schemas/borders.schema.json:7-…` (e.g.
+  `^(Header|Footer|Slider|Button|GridItem|ListItem|Tab|Window|IndentGroupBox|RaisedGroupBox)_[0-3]$`,
+  `^Panel_[0-3]_[0-3]$`, etc.). Nothing asserts the three agree; adding a Window-type or changing an
+  index range means editing all three or silently diverging. (Note: the schema also lives outside this
+  repo — see MEMORY — so a drift checker would need to read across repos.) Consider deriving all three
+  from one source, or a test that cross-checks them.
+- **RGB5551 quantization is not simulated in the coding-themes color sample.** The engine packs colors
+  as RGB5551 (5 bits per RGB channel + 1 alpha bit). The editor only simulates the *alpha* bit:
+  `alphaOn(a)` (`src/package/codingThemes.ts:50`) and the swatch/CSS path quantize alpha to on/off. The
+  RGB channels go straight to full 8-bit — `rgbaToCss`/`rgbaToHex` use `toByte(n) = round(n*255)` with
+  no 5-bit truncation — so the live sample and swatches show colors a touch more precise than the
+  engine will actually render. To simulate: quantize each RGB channel to 5 bits (`(round(n*31)/31)`)
+  before display. Cosmetic preview-fidelity gap only.
+
+### Branch validators/preview added (changelog note, not debt)
+
+For context, this branch also added several validators and an audio preview (these *reduce* the gap
+between editor and engine, they are not debt): asset-in-engine-unsupported-format is now an error
+(`8b4086f`), rc spline/gradient mark shape + strict-ascending ordering checks (`b415031`), nonzero
+TexCoord `timeFactor` warning (`0c4bcec`), imageless Overlay/#COPY mask handling + warning
+(`d258de1`), and audio preview for Assets/Sound-Effect forms (`964e111`).

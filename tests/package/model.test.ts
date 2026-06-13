@@ -1,11 +1,12 @@
 // tests/package/model.test.ts
 import { expect, test } from 'vitest';
 import { loadPackage, serializeFile, anyDirty, FILE_PATHS, type FileKey } from '../../src/package/model';
+import { HttpError } from '../../src/api';
 
 function fakeReader(files: Record<string, string | 'MISSING'>) {
   return async (path: string): Promise<string> => {
     const v = files[path];
-    if (v === undefined || v === 'MISSING') { const e = new Error(`404 ${path}`); throw e; }
+    if (v === undefined || v === 'MISSING') throw new HttpError(`read ${path}: 404`, 404);
     return v;
   };
 }
@@ -56,6 +57,24 @@ test('serializeFile preserves detected indentation and trailing newline', async 
   }));
   expect(serializeFile(pkg.files.borders)).toBe('{\n\t"Window_0": {\n\t\t"a": 1\n\t}\n}\n');
   expect(serializeFile(pkg.files.responseCurves)).toBe('{\n    "Events": {}\n}\n');
+});
+
+test('404 read failure → missing, never errored', async () => {
+  const pkg = await loadPackage(async () => { throw new HttpError('read x: 404', 404); });
+  expect(pkg.files.borders.missing).toBe(true);
+  expect(pkg.files.borders.loadError).toBeUndefined();
+});
+
+test('non-404 read failure → loadError (read-only), not missing', async () => {
+  const pkg = await loadPackage(async () => { throw new HttpError('read x: 500 EIO', 500); });
+  expect(pkg.files.borders.missing).toBeUndefined();
+  expect(pkg.files.borders.loadError).toContain('500');
+});
+
+test('non-HTTP failure (network down) → loadError, not missing', async () => {
+  const pkg = await loadPackage(async () => { throw new TypeError('fetch failed'); });
+  expect(pkg.files.borders.missing).toBeUndefined();
+  expect(pkg.files.borders.loadError).toContain('fetch failed');
 });
 
 test('serializeFile uses a borders-style override (tabs) when a file has no detectable indent', async () => {

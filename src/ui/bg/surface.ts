@@ -11,7 +11,8 @@ import { mountLightForm, updateLightForm } from './lightForm';
 import { mountTexCoordForm, updateTexCoordForm } from './texCoordForm';
 import { mountGradientEditor, updateGradientEditor } from './gradientEditor';
 import { mountBgPreview, updateBgPreview } from './previewPanel';
-import { allDetailNames, allLightNames, unusedDetailNames, unusedLightNames } from '../../package/slotNames';
+import { unusedDetailNames, unusedLightNames } from '../../package/slotNames';
+import { pickFrom } from '../pickerDialog';
 import type { BgFormDeps, BgPreviewDeps } from './types';
 
 const TABS: { id: BgTab; label: string; shared?: boolean }[] = [
@@ -33,16 +34,18 @@ export function createBackgroundsSurface(bgFile: FileDoc, onDirty: () => void): 
     if (tab === 'backdrops' || tab === 'lights') {
       const unused = tab === 'backdrops' ? unusedDetailNames(Object.keys(table)) : unusedLightNames(Object.keys(table));
       if (!unused.length) { alert('All slots are in use.'); return; }
-      const name = prompt(`Add ${tab === 'backdrops' ? 'backdrop' : 'light'} slot:\n${unused.join(', ')}`, unused[0]);
-      if (!name) return;
-      const valid = tab === 'backdrops' ? allDetailNames() : allLightNames();
-      if (!valid.includes(name) || name in table) { alert('Invalid or duplicate slot name.'); return; }
-      table[name] = tab === 'lights' ? { gradient: '' } : {}; // {} backdrop is invalid until configured (visible nudge)
-      selectEntry(tab, name);
+      void pickFrom(`Add ${tab === 'backdrops' ? 'backdrop' : 'light'} slot`, [{ label: 'Slot', options: unused }]).then((picked) => {
+        if (!picked) return;
+        const name = picked[0];
+        table[name] = tab === 'lights' ? { gradient: '' } : {}; // {} backdrop is invalid until configured (visible nudge)
+        selectEntry(tab, name);
+        markDirty();
+      });
+      return;
     } else {
       const name = prompt(`New ${tab} name:`);
       if (!name) return;
-      if (name in table) { alert('Name already exists.'); return; }
+      if (Object.hasOwn(table, name)) { alert('Name already exists.'); return; }
       table[name] = tab === 'gradients' ? [[0, [1, 1, 1, 1]]] : {}; // identity texcoord / single-mark gradient
       selectEntry(tab, name);
     }
@@ -63,7 +66,7 @@ export function createBackgroundsSurface(bgFile: FileDoc, onDirty: () => void): 
     if (tab !== 'texcoords' && tab !== 'gradients') return;
     const next = prompt(`Rename "${name}" to:`, name); if (!next || next === name) return;
     const table = bgFile.root[TAB_TABLE[tab]];
-    if (next in (table ?? {})) { alert('Name already exists.'); return; }
+    if (Object.hasOwn(table ?? {}, next)) { alert('Name already exists.'); return; }
     const ns = tab === 'texcoords' ? 'bg:texcoords' : 'bg:gradients';
     renameNamedEntry(lastCtx!.pkg, lastCtx!.index, ns, name, next);
     selectEntry(tab, next);

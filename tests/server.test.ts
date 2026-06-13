@@ -13,6 +13,8 @@ beforeAll(async () => {
   root = await mkdtemp(path.join(tmpdir(), 'gui-editor-test-'));
   await mkdir(path.join(root, 'sub'));
   await writeFile(path.join(root, 'hello.json'), '{"a":1}');
+  await writeFile(path.join(root, 'beep.wav'), 'RIFFfake');
+  await writeFile(path.join(root, 'mystery.xyz'), 'unknown');
   proc = spawn('node', ['server.js', root], { env: { ...process.env, PORT: String(PORT) } });
   await new Promise<void>((resolve, reject) => {
     proc.stdout!.on('data', () => resolve());
@@ -25,6 +27,18 @@ test('GET /api/file reads a file', async () => {
   const r = await fetch(`${base}/api/file?path=hello.json`);
   expect(r.status).toBe(200);
   expect(await r.text()).toBe('{"a":1}');
+});
+
+test('GET media file serves its real MIME type', async () => {
+  const r = await fetch(`${base}/api/file?path=beep.wav`);
+  expect(r.status).toBe(200);
+  expect(r.headers.get('content-type')).toBe('audio/wav');
+});
+
+test('GET unknown ext falls back to octet-stream', async () => {
+  const r = await fetch(`${base}/api/file?path=mystery.xyz`);
+  expect(r.status).toBe(200);
+  expect(r.headers.get('content-type')).toBe('application/octet-stream');
 });
 
 test('GET missing file is 404', async () => {

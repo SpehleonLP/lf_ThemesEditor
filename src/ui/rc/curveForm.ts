@@ -1,5 +1,6 @@
 // src/ui/rc/curveForm.ts
-import { rcState, setTrigger } from '../../rc/state';
+import { rcState, setTrigger, rcNotify } from '../../rc/state';
+import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
 
 export const STATE_SLOTS = ['HoveringState', 'ToggledState', 'SelectedState', 'BaselineLoop'] as const;
@@ -29,14 +30,21 @@ export function mountCurveForm(h: HTMLElement, d: RcFormDeps): void {
       const play = document.createElement('button'); play.className = 'rc-play'; play.textContent = '▶'; play.title = 'Preview';
       play.dataset.slot = slot;
       play.addEventListener('click', (e) => { e.preventDefault(); const v = (curveOf()?.[slot] ?? ''); if (v) setTrigger({ kind: 'event', name: v }); });
-      row.append(name, sel, play); fs.appendChild(row);
+      const go = document.createElement('button'); go.className = 'ro-go'; go.textContent = '↗'; go.title = 'go to event';
+      go.setAttribute('aria-label', 'Go to event');
+      go.addEventListener('click', (e) => {
+        e.preventDefault();
+        const v = curveOf()?.[slot];
+        if (v) deps!.ctx().navigate({ surface: 'responseCurves', entry: { ns: 'rc:events', name: v } });
+      });
+      row.append(name, sel, play, go); fs.appendChild(row);
     }
     return fs;
   };
   h.append(group('States (loop)', STATE_SLOTS), group('Events (one-shot)', EVENT_SLOTS));
   const cf = document.createElement('label'); cf.className = 'rc-comment';
   cf.textContent = 'Comment '; const ci = document.createElement('input'); ci.type = 'text'; ci.dataset.k = 'Comment';
-  ci.addEventListener('change', () => { const c = curveOf(); if (!c) return; if (ci.value) c.Comment = ci.value; else delete c.Comment; deps!.markDirty(); });
+  ci.addEventListener('change', () => { const c = curveOf(); if (!c) return; if (ci.value) c.Comment = ci.value; else delete c.Comment; deps!.markDirty(); rcNotify(); });
   cf.appendChild(ci); h.appendChild(cf);
   updateCurveForm();
 }
@@ -44,7 +52,7 @@ export function mountCurveForm(h: HTMLElement, d: RcFormDeps): void {
 function writeSlot(slot: string, value: string): void {
   const c = curveOf(); if (!c) return;
   if (value) c[slot] = value; else delete c[slot];
-  deps!.markDirty();
+  deps!.markDirty(); rcNotify();
 }
 
 export function updateCurveForm(): void {
@@ -56,10 +64,7 @@ export function updateCurveForm(): void {
   host.querySelectorAll<HTMLSelectElement>('select[data-slot]').forEach((sel) => {
     const slot = sel.dataset.slot!;
     const cur = c[slot] ?? '';
-    sel.replaceChildren();
-    for (const name of ['', ...events]) { const o = document.createElement('option'); o.value = name; o.textContent = name || '— none —'; sel.appendChild(o); }
-    if (cur && !events.includes(cur)) { const o = document.createElement('option'); o.value = cur; o.textContent = `${cur} (missing)`; sel.appendChild(o); }
-    if (sel !== active) sel.value = cur;
+    if (sel !== active) fillOptions(sel, events, cur, '— none —');
   });
   const ci = host.querySelector<HTMLInputElement>('input[data-k="Comment"]');
   if (ci && ci !== active) ci.value = c.Comment ?? '';

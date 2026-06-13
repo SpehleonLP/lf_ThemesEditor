@@ -177,8 +177,9 @@ export class PreviewRenderer {
     };
 
     // maskMode: 0=none, 1=texture (upload mask layer), 2=overlay (mask=(0,1), no texture needed)
-    gl.uniform1i(u('u_maskMode'), input.maskMode);
-    if (input.maskMode === 1 && input.mask) {
+    const maskMode = input.maskMode === 1 && !input.mask ? 0 : input.maskMode;
+    gl.uniform1i(u('u_maskMode'), maskMode);
+    if (maskMode === 1 && input.mask) {
       const layer = input.mask;
       if (this.texFor['mask'] !== layer.image) {
         this.upload(this.maskTex, layer.image);

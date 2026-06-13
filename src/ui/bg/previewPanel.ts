@@ -7,6 +7,7 @@ import { readLayers, glassEnabled } from '../../bg/backdropModel';
 import { resolveLightTexCoord } from '../../bg/lightInput';
 import { allLightNames } from '../../package/slotNames';
 import { loadImage } from '../../images';
+import { fillOptions } from '../options';
 import type { TexCoordEntry } from '../../bg/texcoord';
 import type { Rgba } from '../../types';
 import type { BgPreviewDeps } from './types';
@@ -26,15 +27,24 @@ function ensureImage(path: string | null): Rgba | null {
   if (!path || path === '#HURL_NOISE') return null;
   if (imgCache.has(path)) return imgCache.get(path)!;
   imgCache.set(path, null);
-  loadImage(path).then((img) => { imgCache.set(path, img); }).catch(() => imgCache.set(path, null));
+  loadImage(path).then((img) => { imgCache.set(path, img); if (!bgState.playing) frame(); }).catch(() => imgCache.set(path, null));
   return null;
 }
 
+let gradKey = '';
+let gradRows: Float32Array[] = [];
+
 function rebuildGradients(): void {
   const grads = _deps!.file.root.Gradients ?? {};
-  gradOrder = Object.keys(grads);
-  const rows = gradOrder.map((n) => bakeGradient(Array.isArray(grads[n]) ? grads[n] : []) as Float32Array);
-  renderer!.setGradients(rows.length ? rows : [new Float32Array(128 * 4).fill(1)], bgState.gradientRev);
+  const order = Object.keys(grads);
+  // gradientRev covers stop edits; the name list covers add/delete/rename (row indices shift).
+  const key = `${bgState.gradientRev}|${order.join(' ')}`;
+  if (key !== gradKey) {
+    gradKey = key;
+    gradOrder = order;
+    gradRows = order.map((n) => bakeGradient(Array.isArray(grads[n]) ? grads[n] : []));
+  }
+  renderer!.setGradients(gradRows.length ? gradRows : [new Float32Array(128 * 4).fill(1)], gradKey);
 }
 
 function lightUniforms(name: string, layerTexCoord: string | undefined, tcs: Record<string, TexCoordEntry>): LightUniforms | null {
@@ -52,7 +62,11 @@ function lightUniforms(name: string, layerTexCoord: string | undefined, tcs: Rec
 }
 
 function frame(): void {
+  raf = 0;
   if (!renderer || !canvas || !_deps) return;
+  // Hidden surface (display:none host) — skip work; updateBgPreview restarts on next show.
+  if (_host && _host.offsetParent === null) return;
+  canvas.dataset.frame = String((Number(canvas.dataset.frame) || 0) + 1); // e2e: rendered-frame tick (only while visible)
   const slot = bgState.selected.backdrops || Object.keys(_deps.file.root.Backgrounds ?? {})[0];
   const entry = slot ? _deps.file.root.Backgrounds?.[slot] : null;
   rebuildGradients();
@@ -101,8 +115,8 @@ export function mountBgPreview(host: HTMLElement, deps: BgPreviewDeps): void {
   canvas = host.querySelector('[data-pv="canvas"]')!;
   try { renderer = new BgPreviewRenderer(canvas); } catch (e) { host.innerHTML = `<div class="bg-note">WebGL2 unavailable: ${String(e)}</div>`; return; }
 
-  host.querySelector('[data-pv="w"]')!.addEventListener('change', (e) => { panelW = Number((e.target as HTMLInputElement).value) || panelW; });
-  host.querySelector('[data-pv="h"]')!.addEventListener('change', (e) => { panelH = Number((e.target as HTMLInputElement).value) || panelH; });
+  host.querySelector('[data-pv="w"]')!.addEventListener('change', (e) => { panelW = Number((e.target as HTMLInputElement).value) || panelW; if (!bgState.playing) frame(); });
+  host.querySelector('[data-pv="h"]')!.addEventListener('change', (e) => { panelH = Number((e.target as HTMLInputElement).value) || panelH; if (!bgState.playing) frame(); });
   host.querySelector('[data-pv="slot"]')!.addEventListener('change', (e) => { bgState.selected.backdrops = (e.target as HTMLSelectElement).value; bgNotify(); });
   host.querySelector('[data-pv="l0"]')!.addEventListener('change', (e) => { const slot = bgState.selected.backdrops; if (slot) setPairing(slot, (e.target as HTMLSelectElement).value, bgState.pairing[slot]?.[1] ?? ''); });
   host.querySelector('[data-pv="l1"]')!.addEventListener('change', (e) => { const slot = bgState.selected.backdrops; if (slot) setPairing(slot, bgState.pairing[slot]?.[0] ?? 'White', (e.target as HTMLSelectElement).value); });
@@ -121,14 +135,15 @@ export function mountBgPreview(host: HTMLElement, deps: BgPreviewDeps): void {
 export function updateBgPreview(): void {
   if (!_host || !_deps || !renderer) return;
   const slots = Object.keys(_deps.file.root.Backgrounds ?? {});
-  const lights = ['White', '', ...Object.keys(_deps.file.root.Lights ?? {}).filter((n) => n !== 'White')];
+  const lights = ['White', ...Object.keys(_deps.file.root.Lights ?? {}).filter((n) => n !== 'White')];
   const fill = (sel: string, opts: string[], val: string) => {
     const el = _host!.querySelector<HTMLSelectElement>(sel); if (!el || el === document.activeElement) return;
-    el.innerHTML = opts.map((o) => `<option value="${o}">${o || '(none)'}</option>`).join(''); el.value = val;
+    fillOptions(el, opts, val, '(none)');
   };
   const slot = bgState.selected.backdrops || slots[0] || '';
   fill('[data-pv="slot"]', slots, slot);
   const pair = bgState.pairing[slot] ?? ['White', ''];
   fill('[data-pv="l0"]', lights, pair[0]); fill('[data-pv="l1"]', lights, pair[1]);
-  if (!bgState.playing) frame(); // static refresh while paused so edits show
+  if (bgState.playing && !raf) raf = requestAnimationFrame(frame); // re-shown + playing → resume loop (frame self-suspends if still hidden)
+  else if (!bgState.playing) frame(); // static refresh while paused so edits show
 }

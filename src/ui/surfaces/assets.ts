@@ -1,6 +1,8 @@
 // src/ui/surfaces/assets.ts
 import type { Surface, SurfaceContext } from './registry';
 import type { AssetEntry } from '../../package/assets';
+import { edgeEntryName } from '../../package/refIndex';
+import { playAsset } from '../audio';
 
 export function createAssetsSurface(): Surface {
   let mainHost!: HTMLElement;
@@ -30,6 +32,11 @@ export function createAssetsSurface(): Surface {
     const name = document.createElement('div'); name.className = 'ro-name'; name.textContent = a.path;
     const status = document.createElement('div'); status.className = `as-status as-${a.status}`; status.textContent = statusLabel(a);
     inspectorHost.append(kicker, name, status);
+    if (a.kind === 'sound' && a.status !== 'rejected-format') {
+      const play = document.createElement('button'); play.className = 'as-play'; play.textContent = '▶'; play.title = 'Play'; play.setAttribute('aria-label', 'Play');
+      play.addEventListener('click', () => playAsset(a.path));
+      status.appendChild(play);
+    }
 
     const ns = a.kind === 'image' ? 'asset:image' : 'asset:sound';
     const consumers = ctxRef.index.consumers(ns, a.path);
@@ -40,7 +47,7 @@ export function createAssetsSurface(): Surface {
       const row = document.createElement('div'); row.className = 'ro-refrow';
       const lbl = document.createElement('span'); lbl.textContent = e.from.label;
       const go = document.createElement('button'); go.className = 'ro-go'; go.textContent = 'go ↗';
-      go.addEventListener('click', () => ctxRef.navigate({ surface: e.from.file, entry: { name: String(e.from.jsonPath[0] ?? '') } }));
+      go.addEventListener('click', () => ctxRef.navigate({ surface: e.from.file, entry: { name: edgeEntryName(e) } }));
       row.append(lbl, go);
       inspectorHost.appendChild(row);
     }
@@ -67,6 +74,11 @@ export function createAssetsSurface(): Surface {
       const fn = document.createElement('span'); fn.className = 'as-fn'; fn.textContent = a.path.replace(/^.*\//, '');
       const pill = document.createElement('span'); pill.className = `as-pill as-${a.status}`; pill.textContent = statusLabel(a);
       card.append(badge, fn, pill);
+      if (a.kind === 'sound' && a.status !== 'rejected-format') {
+        const play = document.createElement('button'); play.className = 'as-play'; play.textContent = '▶'; play.title = 'Play'; play.setAttribute('aria-label', 'Play');
+        play.addEventListener('click', (ev) => { ev.stopPropagation(); playAsset(a.path); });
+        card.appendChild(play);
+      }
       card.addEventListener('click', () => { selected = a.path; renderMain(); renderInspector(); });
       grid.appendChild(card);
     }

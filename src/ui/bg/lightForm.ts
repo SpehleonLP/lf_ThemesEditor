@@ -1,5 +1,6 @@
 // src/ui/bg/lightForm.ts
 import { bgState, bgNotify, setPairing } from '../../bg/state';
+import { fillOptions } from '../options';
 import type { BgFormDeps } from './types';
 
 const MODES = ['None', 'FADE', 'SAW', 'SINE', 'TRIANGLE'];
@@ -15,7 +16,7 @@ export function mountLightForm(host: HTMLElement, deps: BgFormDeps): void {
   host.replaceChildren(); host.className = 'bg-light-form';
   host.innerHTML = `
     <div data-note="white" class="bg-note" style="display:none">Light 0 is the hard-wired white fallback; this entry is enum 1.</div>
-    <label>Gradient: <select data-f="gradient"></select> <button data-f="gGo" title="go to definition">↗</button></label>
+    <label>Gradient: <select data-f="gradient"></select> <button data-f="gGo" title="go to definition">↗</button> <button data-f="gNew" title="create a new gradient" aria-label="Create new gradient">+ new…</button></label>
     <label>TexCoord: <select data-f="texCoord"></select></label>
     <label>Direction x/y: <input type="number" step="any" data-f="dir0" style="width:70px"><input type="number" step="any" data-f="dir1" style="width:70px">
       <canvas data-f="dial" width="40" height="40" class="bg-dial"></canvas></label>
@@ -34,6 +35,14 @@ export function mountLightForm(host: HTMLElement, deps: BgFormDeps): void {
 
   host.querySelector('[data-f="gradient"]')!.addEventListener('change', (e) => { const v = (e.target as HTMLSelectElement).value; const entry = entryOf(); if (entry) { entry.gradient = v; commit(); } });
   host.querySelector('[data-f="gGo"]')!.addEventListener('click', () => { const g = entryOf()?.gradient; if (g) _deps!.ctx().navigate({ surface: 'backgrounds', entry: { ns: 'bg:gradients', name: g } }); });
+  host.querySelector('[data-f="gNew"]')!.addEventListener('click', (e) => {
+    e.preventDefault();
+    const name = prompt('New gradient name:'); if (!name) return;
+    const grads = (_deps!.file.root.Gradients ??= {});
+    if (!Object.hasOwn(grads, name)) grads[name] = [[0, [1, 1, 1, 1]]];
+    const entry = entryOf(); if (!entry) return;
+    entry.gradient = name; commit();
+  });
   host.querySelector('[data-f="texCoord"]')!.addEventListener('change', (e) => { const v = (e.target as HTMLSelectElement).value; const entry = entryOf(); if (!entry) return; if (v === '') delete entry.texCoord; else entry.texCoord = v; commit(); });
   host.querySelector('[data-f="mode"]')!.addEventListener('change', (e) => { const v = (e.target as HTMLSelectElement).value; const entry = entryOf(); if (!entry) return; if (v === 'None') delete entry.mode; else entry.mode = v; commit(); });
   for (const [k, n] of [['dir0', 0], ['dir1', 1]] as const) host.querySelector(`[data-f="${k}"]`)!.addEventListener('change', (e) => {
@@ -64,13 +73,11 @@ export function updateLightForm(): void {
 
   const gNames = _deps.ctx().index.definitions('bg:gradients');
   const gSel = _host.querySelector<HTMLSelectElement>('[data-f="gradient"]')!;
-  if (gSel !== active) gSel.innerHTML = ['', ...gNames].map((o) => `<option value="${o}">${o || '(none — required)'}</option>`).join('');
+  if (gSel !== active) fillOptions(gSel, gNames, entry.gradient ?? '', '(none — required)');
   const tcNames = _deps.ctx().index.definitions('bg:texcoords');
   const tSel = _host.querySelector<HTMLSelectElement>('[data-f="texCoord"]')!;
-  if (tSel !== active) tSel.innerHTML = ['', ...tcNames].map((o) => `<option value="${o}">${o || '(inherit layer texCoord)'}</option>`).join('');
+  if (tSel !== active) fillOptions(tSel, tcNames, entry.texCoord ?? '', '(inherit layer texCoord)');
 
-  set('[data-f="gradient"]', entry.gradient ?? '');
-  set('[data-f="texCoord"]', entry.texCoord ?? '');
   const dir = Array.isArray(entry.direction) ? entry.direction : [0, 1];
   set('[data-f="dir0"]', String(dir[0])); set('[data-f="dir1"]', String(dir[1]));
   set('[data-f="scale"]', entry.scale != null ? String(entry.scale) : '');

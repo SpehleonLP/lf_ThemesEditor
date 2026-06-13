@@ -1,6 +1,6 @@
 // tests/package/refIndex.test.ts
 import { expect, test } from 'vitest';
-import { buildRefIndex } from '../../src/package/refIndex';
+import { buildRefIndex, edgeEntryName } from '../../src/package/refIndex';
 import type { PackageDoc, FileDoc } from '../../src/package/model';
 
 function fd(root: any): FileDoc { return { path: 'x', root, dirty: false, indent: '\t' }; }
@@ -81,6 +81,12 @@ test('dangling targets a missing name; consumers/dead reflect the graph', () => 
   expect(idx.consumers('rc:events', 'Pop').map((e) => e.from.jsonPath.join('/'))).toEqual(['Response Curves/Action_0/OnClick']);
   expect(idx.dead('rc:events')).toEqual(['Unused']);   // defined, zero consumers
   expect(idx.definitions('rc:events').sort()).toEqual(['Pop', 'Unused']);
+});
+
+test('edgeEntryName picks the entry, not the table', () => {
+  expect(edgeEntryName({ from: { file: 'borders', jsonPath: ['Header_0', 'Overlay', 'Image'], label: '' }, to: {} } as any)).toBe('Header_0');
+  expect(edgeEntryName({ from: { file: 'backgrounds', jsonPath: ['Backgrounds', '3', 'Detail Layers', 0, 'image'], label: '' }, to: {} } as any)).toBe('3');
+  expect(edgeEntryName({ from: { file: 'responseCurves', jsonPath: ['Sound Effects', 'click', 'file'], label: '' }, to: {} } as any)).toBe('click');
 });
 
 test('bg and rc Gradients are separate namespaces', () => {

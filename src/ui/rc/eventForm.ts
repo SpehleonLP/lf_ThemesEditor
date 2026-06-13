@@ -1,6 +1,7 @@
 // src/ui/rc/eventForm.ts
-import { rcState, setTrigger } from '../../rc/state';
+import { rcState, setTrigger, rcNotify } from '../../rc/state';
 import { CHANNELS, CHANNEL_KEYS } from '../../rc/channels';
+import { fillOptions } from '../options';
 import type { RcFormDeps } from './types';
 
 let host: HTMLElement | null = null, deps: RcFormDeps | null = null;
@@ -19,14 +20,22 @@ export function mountEventForm(h: HTMLElement, d: RcFormDeps): void {
     const row = document.createElement('label'); row.className = 'rc-slot';
     const name = document.createElement('span'); name.className = 'rc-slot-name'; name.textContent = `${key} (${CHANNELS[key].table})`;
     const sel = document.createElement('select'); sel.dataset.ch = key;
-    sel.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (sel.value) ev[key] = sel.value; else delete ev[key]; deps!.markDirty(); });
-    row.append(name, sel); fs.appendChild(row);
+    sel.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (sel.value) ev[key] = sel.value; else delete ev[key]; deps!.markDirty(); rcNotify(); });
+    const go = document.createElement('button'); go.className = 'ro-go'; go.textContent = '↗'; go.title = 'go to definition';
+    go.setAttribute('aria-label', 'Go to definition');
+    go.addEventListener('click', (e) => {
+      e.preventDefault();
+      const ref = eventOf()?.[key];
+      const ns = CHANNELS[key].ns;
+      if (ref && ns) deps!.ctx().navigate({ surface: 'responseCurves', entry: { ns, name: ref } });
+    });
+    row.append(name, sel, go); fs.appendChild(row);
   }
   h.appendChild(fs);
 
   const cf = document.createElement('label'); cf.className = 'rc-comment'; cf.textContent = 'Comment ';
   const ci = document.createElement('input'); ci.type = 'text'; ci.dataset.k = 'Comment';
-  ci.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (ci.value) ev.Comment = ci.value; else delete ev.Comment; deps!.markDirty(); });
+  ci.addEventListener('change', () => { const ev = eventOf(); if (!ev) return; if (ci.value) ev.Comment = ci.value; else delete ev.Comment; deps!.markDirty(); rcNotify(); });
   cf.appendChild(ci); h.appendChild(cf);
   updateEventForm();
 }
@@ -39,10 +48,7 @@ export function updateEventForm(): void {
     const key = sel.dataset.ch!;
     const names = Object.keys(deps!.file.root[CHANNELS[key as keyof typeof CHANNELS].table] ?? {});
     const cur = ev[key] ?? '';
-    sel.replaceChildren();
-    for (const n of ['', ...names]) { const o = document.createElement('option'); o.value = n; o.textContent = n || '— none —'; sel.appendChild(o); }
-    if (cur && !names.includes(cur)) { const o = document.createElement('option'); o.value = cur; o.textContent = `${cur} (missing)`; sel.appendChild(o); }
-    if (sel !== active) sel.value = cur;
+    if (sel !== active) fillOptions(sel, names, cur, '— none —');
   });
   const ci = host.querySelector<HTMLInputElement>('input[data-k="Comment"]');
   if (ci && ci !== active) ci.value = ev.Comment ?? '';

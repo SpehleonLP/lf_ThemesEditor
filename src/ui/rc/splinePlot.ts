@@ -38,6 +38,7 @@ export function createSplinePlot(host: HTMLElement, opts: SplinePlotOpts): { upd
   const vFromY = (y: number, lo: number, hi: number) => lo + ((H - PAD - y) / (H - 2 * PAD)) * (hi - lo);
 
   let sel = 0, dragging = -1;
+  let dragAxis: { maxT: number; lo: number; hi: number } | null = null;
 
   function draw(): void {
     const ctx = canvas.getContext('2d')!; ctx.clearRect(0, 0, W, H);
@@ -76,7 +77,7 @@ export function createSplinePlot(host: HTMLElement, opts: SplinePlotOpts): { upd
       const X = sx(m[0], maxT);
       comp(m).forEach((v) => { const Y = sy(v, lo, hi); const d = (X - e.offsetX) ** 2 + (Y - e.offsetY) ** 2; if (d < best) { best = d; nearest = i; } });
     });
-    if (nearest >= 0) { sel = nearest; dragging = nearest; canvas.setPointerCapture(e.pointerId); draw(); }
+    if (nearest >= 0) { sel = nearest; dragging = nearest; dragAxis = { maxT, lo, hi }; canvas.setPointerCapture(e.pointerId); draw(); }
     else {
       const t = tFromX(e.offsetX, maxT);
       const sampled = sampleSpline(marks, opts.dim, t, opts.loop());
@@ -86,20 +87,24 @@ export function createSplinePlot(host: HTMLElement, opts: SplinePlotOpts): { upd
     }
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (dragging < 0) return;
-    const marks = opts.getMarks().slice(); const maxT = maxTOf(marks); const [lo, hi] = yRange(marks);
-    const t = tFromX(e.offsetX, maxT); const v = vFromY(e.offsetY, lo, hi);
+    if (dragging < 0 || !dragAxis) return;
+    const marks = opts.getMarks().slice();
+    const t = tFromX(e.offsetX, dragAxis.maxT); const v = vFromY(e.offsetY, dragAxis.lo, dragAxis.hi);
     const old = marks[dragging];
     // drag t for both components; drag value for component 0 (1D) — keep 2D simple: move t only, edit y via numeric list.
     marks[dragging] = opts.dim === 1 ? [t, v] : [t, (old[1] as number[]).slice() as any];
     opts.setMarks(marks, { live: true });
   });
-  canvas.addEventListener('pointerup', (e) => {
-    if (dragging < 0) return; canvas.releasePointerCapture(e.pointerId);
-    const marks = opts.getMarks().slice(); const draggedT = marks[dragging][0];
-    marks.sort((a, b) => a[0] - b[0]); sel = marks.findIndex((m) => m[0] === draggedT);
-    dragging = -1; opts.setMarks(marks, { live: false }); renderMarks();
-  });
+  function endDrag(e: PointerEvent): void {
+    if (dragging < 0) return;
+    try { canvas.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    const marks = opts.getMarks().slice();
+    const dragged = marks[dragging];
+    marks.sort((a, b) => a[0] - b[0]); sel = Math.max(0, marks.indexOf(dragged)); // identity, not t-equality
+    dragging = -1; dragAxis = null; opts.setMarks(marks, { live: false }); renderMarks();
+  }
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
 
   // Numeric mark list mirrors the canvas (the authoritative editor for 2D y-values).
   function renderMarks(): void {

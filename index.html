@@ -112,6 +112,7 @@
     .as-fn { font: 12px 'JetBrains Mono', monospace; }
     .as-pill { font-size: 11px; opacity: .8; }
     .as-status { padding: 6px 0; }
+    .as-play { background: #1a1a22; border: 1px solid #33333d; color: #cbb8ff; border-radius: 4px; cursor: pointer; align-self: flex-start; margin-top: 2px; }
     .drawer { position: absolute; right: 0; top: 0; height: 100%; width: 380px; background: #14141a; border-left: 1px solid #2a2a33; overflow: auto; z-index: 40; }
     .drawer-head { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #2a2a33; }
     .drawer-head button { background: none; border: none; color: #ccc; cursor: pointer; }
@@ -159,6 +160,14 @@
     .bg-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; background: #1a1a22; border: 1px solid #33333d; border-radius: 4px; color: #ccc; padding: 6px 2px; cursor: pointer; font-size: 11px; }
     .bg-tab-active { background: rgba(140,120,220,.22); color: #fff; }
     .bg-tab-count { font: 10px 'JetBrains Mono', monospace; opacity: .6; }
+    .picker-dialog { background: #1a1a22; color: #ddd; border: 1px solid #33333d; border-radius: 6px; padding: 16px; min-width: 240px; font-size: 13px; }
+    .picker-dialog::backdrop { background: rgba(0,0,0,.5); }
+    .picker-title { font-weight: 600; color: #fff; margin-bottom: 12px; }
+    .picker-dialog label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .picker-dialog select { background: #11111a; color: #ddd; border: 1px solid #33333d; border-radius: 4px; padding: 4px 6px; }
+    .picker-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    .picker-buttons button { background: #2a2a33; color: #ddd; border: 1px solid #44444f; border-radius: 4px; padding: 5px 12px; cursor: pointer; }
+    .picker-buttons button[value="ok"] { background: rgba(140,120,220,.3); color: #fff; }
     .bg-list { border-right: 1px solid #2a2a33; }
     .bg-entrylist { display: flex; flex-direction: column; }
     .bg-el-head { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-bottom: 1px solid #23232b; }
@@ -177,6 +186,7 @@
     .rc-slot-name { flex: 1; }
     .rc-play { background: #1a1a22; border: 1px solid #33333d; color: #cbb8ff; border-radius: 4px; cursor: pointer; }
     .rc-comment input, .rc-slot select, .rc-slot input[type="number"], .rc-mark-row input { background: #23232b; color: #cfcfcf; border: 1px solid #2a2a33; border-radius: 3px; }
+    .opt-missing { color: #f66; }
     .rc-plot-canvas { border: 1px solid #2a2a33; border-radius: 4px; }
     .rc-plot-marks { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
     .rc-mark-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }

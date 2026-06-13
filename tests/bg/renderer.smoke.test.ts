@@ -14,7 +14,7 @@ describe.skipIf(!hasGL)('BgPreviewRenderer', () => {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 64;
     const r = new BgPreviewRenderer(canvas);
-    r.setGradients([new Float32Array(128 * 4).fill(1)], 1);
+    r.setGradients([new Float32Array(128 * 4).fill(1)], '1');
     r.render({
       input: { corners: [
         { quad: [-1, -1], detail0: [0, 0], detail1: null, light0: null, light1: null, glassUV: null },

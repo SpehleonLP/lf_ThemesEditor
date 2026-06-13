@@ -7,20 +7,17 @@ export interface BordersDoc {
 }
 
 export function wrapBordersRoot(root: Record<string, any>): BordersDoc {
-  for (const k of Object.keys(root)) {
-    if (/^[0-9]+$/.test(k)) {
-      throw new Error(`numeric border key "${k}": JS object key-order rules would reorder it; not supported by this editor`);
-    }
+  const bad = numericBorderKeys(root);
+  if (bad.length) {
+    throw new Error(`numeric border key "${bad[0]}": JS object key-order rules would reorder it; not supported by this editor`);
   }
   return { root, names: Object.keys(root) };
 }
 
-export function parseDocument(text: string): BordersDoc {
-  return wrapBordersRoot(JSON.parse(text) as Record<string, any>);
-}
-
-export function serializeDocument(doc: BordersDoc): string {
-  return JSON.stringify(doc.root, null, '\t') + '\n';
+// The editor cannot round-trip numeric root keys (JS key-order rules would silently
+// reorder them on serialize). Detect at load so the file degrades to read-only.
+export function numericBorderKeys(root: Record<string, any>): string[] {
+  return Object.keys(root).filter((k) => /^[0-9]+$/.test(k));
 }
 
 export function getEditorMeta(entry: any): any | undefined {
@@ -57,16 +54,23 @@ export interface PackApply {
 
 const flat = (g: CellGrid): EditorCell[] => g.flat().map((c) => ({ rect: [...c.rect] as Vec4, mirrorX: c.mirrorX, mirrorY: c.mirrorY }));
 
+// A pack result always rewrites the layer as the object form; the string forms
+// ("#OVERLAY", copy refs) can't carry the new Image/Cells.
+const objectLayer = (entry: any, key: 'Mask' | 'Overlay'): any => {
+  if (typeof entry[key] !== 'object' || entry[key] === null || Array.isArray(entry[key])) entry[key] = {};
+  return entry[key];
+};
+
 export function applyPackResult(entry: any, r: PackApply): void {
   if (r.overlayImage && r.overlayCells) {
-    entry.Overlay ??= {};
-    entry.Overlay.Image = r.overlayImage;
-    entry.Overlay.Cells = serializeCells(r.overlayCells);
+    const overlay = objectLayer(entry, 'Overlay');
+    overlay.Image = r.overlayImage;
+    overlay.Cells = serializeCells(r.overlayCells);
   }
   if (r.maskImage && r.maskCells) {
-    entry.Mask ??= {};
-    entry.Mask.Image = r.maskImage;
-    entry.Mask.Cells = r.linked ? '#COPY' : serializeCells(r.maskCells);
+    const mask = objectLayer(entry, 'Mask');
+    mask.Image = r.maskImage;
+    mask.Cells = r.linked ? '#COPY' : serializeCells(r.maskCells);
   }
   setEditorMeta(entry, {
     version: 1,

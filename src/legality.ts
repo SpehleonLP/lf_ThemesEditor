@@ -48,8 +48,14 @@ export function findCanvas(
   const minArea = pieces.reduce((s, p) => s + (p.w + opts.gutter) * (p.h + opts.gutter), 0);
   const minSide = Math.max(...pieces.map((p) => Math.max(p.w, p.h)), 1);
   for (const [w, h] of candidateSheets(maxDim)) {
-    if (w * h < minArea || (w < minSide && h < minSide)) continue;
-    const placed = packRects(pieces, w, h, opts);
+    // Pack into the canvas minus one trailing gutter: the packer (packRects) pads
+    // only TRAILING edges between sprites, so without this the right/bottom-edge
+    // sprites have no outer margin and bleed under bilinear/mip sampling after the
+    // engine repacks sheets into megatextures. We still report the FULL {w, h};
+    // placements stay absolute and < w-gutter < w, so the blit/rewrite is unaffected.
+    const pw = w - opts.gutter, ph = h - opts.gutter;
+    if (pw <= 0 || ph <= 0 || w * h < minArea || (pw < minSide && ph < minSide)) continue;
+    const placed = packRects(pieces, pw, ph, opts);
     if (placed) return { w, h, placed };
   }
   return null;

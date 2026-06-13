@@ -46,6 +46,7 @@ function computeVec(out: number[][], n0: number, n1: number, n2: number, n3: num
 // Port of compute<T>(timestamp, loop_begin, loop_end) — index + local-t selection. t in seconds.
 function computeSelect(s: SplineData, dim: Dim, t: number, loopBegin: boolean, loopEnd: boolean): number[] {
   const input = s.input, output = s.output, elements = input.length;
+  if (elements === 0) return new Array<number>(dim).fill(0); // hand-edited doc; schema requires >=1
   if (elements === 1) return output[0].slice();
 
   if (t < input[0]) {

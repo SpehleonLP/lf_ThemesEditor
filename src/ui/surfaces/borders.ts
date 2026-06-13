@@ -31,6 +31,17 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
   let lastCtx: SurfaceContext | null = null;
 
   function buildOnce(host: HTMLElement): void {
+    // A numeric/raw-enum root key (or any load failure) makes the file unsafe to round-trip;
+    // boot sets loadError. Render a read-only notice instead of calling wrapBordersRoot (which
+    // throws on numeric keys) and crashing the whole app at mount.
+    if (bordersFile.loadError) {
+      host.replaceChildren();
+      const div = document.createElement('div');
+      div.className = 'ro-empty';
+      div.textContent = `borders.json is read-only: ${bordersFile.loadError}`;
+      host.appendChild(div);
+      return;
+    }
     host.replaceChildren();
     host.className = 'borders-surface';
     // Three-column grid (left: slot list, middle: cells, right: preview) over a bottom bar
@@ -45,6 +56,7 @@ export function createBordersSurface(bordersFile: FileDoc, onDirty: () => void):
       </footer>`;
     // Share the package model's root — do NOT re-read borders.json.
     state.doc = wrapBordersRoot(bordersFile.root);
+    state.file = bordersFile;
 
     // Wrap each existing render closure as a Panel. mount() and update() are identical for now
     // (a pure refactor); later tasks (2.2-2.4) split each into a real one-time mount vs in-place

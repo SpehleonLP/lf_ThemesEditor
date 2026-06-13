@@ -537,9 +537,12 @@ export function updatePreview(): void {
 
   const entry = state.doc.root[state.selected];
   const mm = readMaskMode(entry);
-  const maskMode: 0 | 1 | 2 = mm === 'none' ? 0 : mm === '#OVERLAY' ? 2 : 1;
+  const maskLayer = layerInput('mask');
+  // '#COPY'/'image' need a sampleable mask texture; without one, render unmasked
+  // (matches "nothing to sample") instead of inheriting the previous draw's uniforms.
+  const maskMode: 0 | 1 | 2 = mm === 'none' ? 0 : mm === '#OVERLAY' ? 2 : maskLayer ? 1 : 0;
   const input: PreviewInput = {
-    mask: layerInput('mask'),
+    mask: maskLayer,
     overlay: layerInput('overlay'),
     tessellation: (entry.Tessellation ?? [0, 0, 0, 0]) as Vec4,
     centerTile: (entry.CenterTile ?? [1, 1, -1, -1]) as Vec4,

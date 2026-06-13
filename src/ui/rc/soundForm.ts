@@ -1,5 +1,7 @@
 // src/ui/rc/soundForm.ts
-import { rcState } from '../../rc/state';
+import { rcState, rcNotify } from '../../rc/state';
+import { fillOptions } from '../options';
+import { playAsset } from '../audio';
 import type { RcFormDeps } from './types';
 
 const RANGES = ['tone', 'speed', 'volume'] as const;
@@ -14,8 +16,16 @@ export function mountSoundForm(h: HTMLElement, d: RcFormDeps): void {
   const fileRow = document.createElement('label'); fileRow.className = 'rc-slot';
   fileRow.append(span('file'));
   const fileSel = document.createElement('select'); fileSel.dataset.k = 'file';
-  fileSel.addEventListener('change', () => { const s = soundOf(); if (!s) return; s.file = fileSel.value; deps!.markDirty(); });
-  fileRow.appendChild(fileSel); fs.appendChild(fileRow);
+  fileSel.addEventListener('change', () => { const s = soundOf(); if (!s) return; s.file = fileSel.value; deps!.markDirty(); rcNotify(); });
+  fileRow.appendChild(fileSel);
+  const play = document.createElement('button'); play.className = 'rc-play'; play.textContent = '▶'; play.title = 'Play (randomized in authored ranges)'; play.setAttribute('aria-label', 'Play');
+  play.addEventListener('click', (e) => {
+    e.preventDefault();
+    const s = soundOf();
+    if (s?.file) playAsset(s.file, { tone: Array.isArray(s.tone) ? s.tone : undefined, speed: Array.isArray(s.speed) ? s.speed : undefined, volume: Array.isArray(s.volume) ? s.volume : undefined });
+  });
+  fileRow.appendChild(play);
+  fs.appendChild(fileRow);
 
   for (const key of RANGES) {
     const row = document.createElement('label'); row.className = 'rc-slot';
@@ -27,7 +37,7 @@ export function mountSoundForm(h: HTMLElement, d: RcFormDeps): void {
       const s = soundOf(); if (!s) return;
       if (on.checked) s[key] = [Number(min.value) || 0, Number(max.value) || 0];
       else delete s[key];
-      deps!.markDirty();
+      deps!.markDirty(); rcNotify();
     };
     on.addEventListener('change', writeRange); min.addEventListener('change', writeRange); max.addEventListener('change', writeRange);
     row.append(on, min, max); fs.appendChild(row);
@@ -36,7 +46,7 @@ export function mountSoundForm(h: HTMLElement, d: RcFormDeps): void {
 
   const cf = document.createElement('label'); cf.className = 'rc-comment'; cf.textContent = 'Comment ';
   const ci = document.createElement('input'); ci.type = 'text'; ci.dataset.k = 'Comment';
-  ci.addEventListener('change', () => { const s = soundOf(); if (!s) return; if (ci.value) s.Comment = ci.value; else delete s.Comment; deps!.markDirty(); });
+  ci.addEventListener('change', () => { const s = soundOf(); if (!s) return; if (ci.value) s.Comment = ci.value; else delete s.Comment; deps!.markDirty(); rcNotify(); });
   cf.appendChild(ci); h.appendChild(cf);
   updateSoundForm();
 }
@@ -50,10 +60,7 @@ export function updateSoundForm(): void {
   const fileSel = host.querySelector<HTMLSelectElement>('select[data-k="file"]')!;
   const sounds = deps.ctx().assets.sounds.filter((a) => a.status !== 'rejected-format').map((a) => a.path);
   const cur = s.file ?? '';
-  fileSel.replaceChildren();
-  for (const p of ['', ...sounds]) { const o = document.createElement('option'); o.value = p; o.textContent = p || '— none —'; fileSel.appendChild(o); }
-  if (cur && !sounds.includes(cur)) { const o = document.createElement('option'); o.value = cur; o.textContent = `${cur} (missing)`; fileSel.appendChild(o); }
-  if (fileSel !== active) fileSel.value = cur;
+  if (fileSel !== active) fillOptions(fileSel, sounds, cur, '— none —');
 
   for (const key of RANGES) {
     const on = host.querySelector<HTMLInputElement>(`input[data-on="${key}"]`)!;

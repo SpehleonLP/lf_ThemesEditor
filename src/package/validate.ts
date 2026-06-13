@@ -41,7 +41,7 @@ const NS_LABEL: Record<Namespace, string> = {
   'asset:image': 'image', 'asset:sound': 'sound',
 };
 
-type Validator = (pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators) => Issue[];
+export type Validator = (pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators) => Issue[];
 
 // 1. schema — ajv per file, with the unknown-key → notice downgrade.
 const schemaValidator: Validator = (pkg, _index, _assets, schemas) => {
@@ -100,6 +100,9 @@ const assetsValidator: Validator = (_pkg, _index, assets) => {
   const out: Issue[] = [];
   for (const m of assets.missing) {
     out.push({ severity: 'error', category: 'asset', message: `Referenced ${m.kind} "${m.name}" is missing on disk — the build will silently drop it.`, file: 'assets', nav: { surface: 'assets' } });
+  }
+  for (const w of assets.wrongFormat) {
+    out.push({ severity: 'error', category: 'asset', message: `Referenced ${w.kind} "${w.name}" is a .${w.ext} — the engine only loads ${w.kind === 'image' ? 'png/jpg/jpeg/bmp' : 'wav/flac/ogg'}. Export it to a supported format.`, file: 'assets', nav: { surface: 'assets' } });
   }
   for (const a of [...assets.images, ...assets.sounds]) {
     if (a.status === 'rejected-format') {
@@ -182,7 +185,96 @@ const bgGradientMarksValidator: Validator = (pkg) => {
   return out;
 };
 
-const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator];
+// borders-overlay-image — an object-form Overlay with no Image has no visible
+// artwork to draw. (An imageless Mask is fine: it reuses the Overlay image — #COPY semantics.)
+export const bordersLayerImageValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const doc = pkg.files.borders;
+  if (doc.loadError || doc.missing || !doc.root) return out;
+  for (const name of Object.keys(doc.root)) {
+    const layer = doc.root[name]?.Overlay;
+    if (layer && typeof layer === 'object' && !Array.isArray(layer)
+        && (typeof layer.Image !== 'string' || layer.Image === '')) {
+      out.push({
+        severity: 'warning', category: 'borders-overlay-image',
+        message: `Border "${name}" Overlay has no Image — there is no artwork to draw.`,
+        file: 'borders', jsonPath: [name, 'Overlay'],
+        nav: { surface: 'borders', entry: { name } },
+      });
+    }
+  }
+  return out;
+};
+
+// rc-marks — the engine's Catmull-Rom evaluation assumes strictly ascending knots and
+// fixed-dim values; the schemas document it but ajv can't express the ordering.
+const RC_MARK_TABLES: { table: string; ns: Namespace; dim: number }[] = [
+  { table: '1D Splines', ns: 'rc:splines1d', dim: 1 },
+  { table: '2D Splines', ns: 'rc:splines2d', dim: 2 },
+  { table: 'Gradients', ns: 'rc:gradients', dim: 4 },
+];
+export const rcMarksValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const doc = pkg.files.responseCurves;
+  if (doc.loadError || doc.missing || !doc.root) return out;
+  for (const { table, ns, dim } of RC_MARK_TABLES) {
+    const tbl = doc.root[table];
+    if (!tbl || typeof tbl !== 'object') continue;
+    for (const name of Object.keys(tbl)) {
+      const marks = tbl[name];
+      if (!Array.isArray(marks)) continue; // shape itself is ajv's job
+      const issue = (message: string) => out.push({
+        severity: 'error', category: 'rc-marks', message,
+        file: 'responseCurves', jsonPath: [table, name],
+        nav: { surface: 'responseCurves', entry: { ns, name } },
+      });
+      const badShape = marks.some((m: any) =>
+        !Array.isArray(m) || typeof m[0] !== 'number'
+        || (dim === 1 ? typeof m[1] !== 'number'
+            : !Array.isArray(m[1]) || m[1].length !== dim || m[1].some((v: any) => typeof v !== 'number')));
+      if (badShape) { issue(`${NS_LABEL[ns]} "${name}" has a malformed mark — expected [t, ${dim === 1 ? 'value' : `[${dim} numbers]`}].`); continue; }
+      for (let i = 1; i < marks.length; ++i) {
+        if (!(marks[i][0] > marks[i - 1][0])) {
+          issue(`${NS_LABEL[ns]} "${name}" mark times are not strictly ascending (t[${i}]=${marks[i][0]} after t[${i - 1}]=${marks[i - 1][0]}) — spline evaluation misbehaves.`);
+          break;
+        }
+      }
+    }
+  }
+  return out;
+};
+
+// texcoord-timefactor — only timeFactor 0 is reliable (known engine shader int/float bug,
+// brief §3.4). The engine port (src/bg/texcoord.ts) defaults an ABSENT timeFactor to 1, so an
+// absent field silently inherits the buggy realtime path — warn on absent AND on explicit nonzero.
+export const texCoordTimeFactorValidator: Validator = (pkg) => {
+  const out: Issue[] = [];
+  const doc = pkg.files.backgrounds;
+  if (doc.loadError || doc.missing || !doc.root) return out;
+  const tcs = doc.root.TexCoords;
+  if (!tcs || typeof tcs !== 'object') return out;
+  for (const name of Object.keys(tcs)) {
+    const tf = tcs[name]?.timeFactor;
+    if (tf === undefined) {
+      out.push({
+        severity: 'warning', category: 'texcoord-timefactor',
+        message: `TexCoord "${name}" has no timeFactor — the engine defaults it to 1 (realtime), but only 0 is reliable (known engine shader int/float bug). Set it to 0.`,
+        file: 'backgrounds', jsonPath: ['TexCoords', name],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:texcoords', name } },
+      });
+    } else if (typeof tf === 'number' && tf !== 0) {
+      out.push({
+        severity: 'warning', category: 'texcoord-timefactor',
+        message: `TexCoord "${name}" has timeFactor=${tf} — only 0 is reliable (known engine shader int/float bug).`,
+        file: 'backgrounds', jsonPath: ['TexCoords', name, 'timeFactor'],
+        nav: { surface: 'backgrounds', entry: { ns: 'bg:texcoords', name } },
+      });
+    }
+  }
+  return out;
+};
+
+const REGISTRY: Validator[] = [fileStateValidator, schemaValidator, danglingValidator, deadEntryValidator, assetsValidator, bordersTessUnitsValidator, bgGradientMarksValidator, bordersLayerImageValidator, rcMarksValidator, texCoordTimeFactorValidator];
 
 export function runValidators(pkg: PackageDoc, index: RefIndex, assets: AssetList, schemas: SchemaValidators): Issue[] {
   return REGISTRY.flatMap((v) => v(pkg, index, assets, schemas));

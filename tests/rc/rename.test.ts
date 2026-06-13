@@ -35,4 +35,18 @@ describe('rc/rename', () => {
     const index = buildRefIndex(pkg);
     expect(() => renameRcEntry(pkg, index, 'rc:gradients', 'g1', 'g2')).toThrow();
   });
+
+  it('allows renaming to Object.prototype names', () => {
+    const pkg = pkgWith({ 'Events': { A: {} } });
+    const index = buildRefIndex(pkg);
+    expect(() => renameRcEntry(pkg, index, 'rc:events', 'A', 'toString')).not.toThrow();
+    expect(pkg.files.responseCurves.root['Events'].toString).toBeDefined();
+  });
+
+  it('treats a constructor-named entry as present (not inherited)', () => {
+    const pkg = pkgWith({ 'Events': { constructor: {} } });
+    const index = buildRefIndex(pkg);
+    expect(() => renameRcEntry(pkg, index, 'rc:events', 'constructor', 'ctor')).not.toThrow();
+    expect(pkg.files.responseCurves.root['Events'].ctor).toBeDefined();
+  });
 });

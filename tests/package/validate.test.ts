@@ -69,9 +69,9 @@ test('missing file → notice', async () => {
   expect(issues.some((i) => i.file === 'backgrounds' && i.category === 'missing-file' && i.severity === 'notice')).toBe(true);
 });
 
-test('timeFactor in a TexCoord → no texcoord-timefactor issue emitted', async () => {
+test('nonzero timeFactor in a TexCoord → texcoord-timefactor warning emitted', async () => {
   const issues = await run(pkg({ backgrounds: fd({ TexCoords: { spin: { timeFactor: 5 } } }) }));
-  expect(issues.some((i) => i.category === 'texcoord-timefactor')).toBe(false);
+  expect(issues.some((i) => i.category === 'texcoord-timefactor' && i.severity === 'warning')).toBe(true);
 });
 
 test('loadError file is reported once and not schema-checked', async () => {

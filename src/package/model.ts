@@ -36,8 +36,14 @@ export async function loadPackage(read: ReadText): Promise<PackageDoc> {
     let text: string;
     try {
       text = await read(path);
-    } catch {
-      files[key] = { path, root: {}, dirty: false, indent: '\t', missing: true };
+    } catch (e) {
+      // Only a confirmed 404 means "doesn't exist yet". Anything else (5xx, network)
+      // must NOT degrade to missing: a later Save would overwrite the real file.
+      if ((e as any)?.status === 404) {
+        files[key] = { path, root: {}, dirty: false, indent: '\t', missing: true };
+      } else {
+        files[key] = { path, root: {}, dirty: false, indent: '\t', loadError: String((e as Error)?.message ?? e) };
+      }
       continue;
     }
     try {

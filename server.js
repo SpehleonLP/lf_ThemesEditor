@@ -13,6 +13,7 @@ const port = Number(process.env.PORT ?? 8137);
 const MIME = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.png': 'image/png', '.json': 'application/json', '.map': 'application/json',
+  '.wav': 'audio/wav', '.flac': 'audio/flac', '.ogg': 'audio/ogg',
 };
 
 function jail(base, rel) {
@@ -54,7 +55,7 @@ const server = http.createServer(async (req, res) => {
       const abs = jail(root, url.searchParams.get('path') ?? '');
       if (req.method === 'GET') {
         const data = await fsp.readFile(abs);
-        res.writeHead(200, { 'content-type': 'application/octet-stream' });
+        res.writeHead(200, { 'content-type': MIME[path.extname(abs).toLowerCase()] ?? 'application/octet-stream' });
         return res.end(data);
       }
       if (req.method === 'PUT') {

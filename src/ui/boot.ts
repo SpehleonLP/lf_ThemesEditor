@@ -11,6 +11,7 @@ import { createResponseCurvesSurface } from './rc/surface';
 import { createCodingThemesSurface } from './surfaces/codingThemes';
 import { createAssetsSurface } from './surfaces/assets';
 import type { Surface, SurfaceContext } from './surfaces/registry';
+import { numericBorderKeys } from '../document';
 
 async function loadSchemas(): Promise<SchemaTexts> {
   const read = (n: string) => readFileText(`schemas/${n}`).then((t) => JSON.parse(t));
@@ -24,6 +25,16 @@ async function loadSchemas(): Promise<SchemaTexts> {
 
 async function boot(): Promise<void> {
   const pkg = await loadPackage(readFileText);
+
+  // Numeric root keys (raw enum slots) can't be round-tripped — JS key-order rules would
+  // reorder them on serialize. Detect at load and degrade borders to read-only so the
+  // surface shows a notice instead of throwing inside wrapBordersRoot at mount.
+  const b = pkg.files.borders;
+  if (!b.loadError && !b.missing) {
+    const bad = numericBorderKeys(b.root);
+    if (bad.length) b.loadError = `borders.json uses numeric key "${bad[0]}" (raw enum). The editor cannot round-trip numeric keys; the file is read-only here. Rename the key to its slot name in a text editor.`;
+  }
+
   const schemas = createSchemaValidators(await loadSchemas());
 
   let index: RefIndex = buildRefIndex(pkg);

@@ -1,4 +1,5 @@
 import type { BordersDoc } from '../document';
+import type { FileDoc } from '../package/model';
 import type { CellGrid, FillMode, Rgba } from '../types';
 
 export type LayerName = 'mask' | 'overlay';
@@ -13,6 +14,7 @@ export interface LayerState {
 
 export interface AppState {
   doc: BordersDoc | null;
+  file: FileDoc | null;               // borders FileDoc — single source of truth for indent/dirty
   selected: string | null;            // border name
   layers: Record<LayerName, LayerState> | null;
   activeLayer: LayerName;
@@ -27,7 +29,7 @@ type Listener = () => void;
 const listeners: Listener[] = [];
 
 export const state: AppState = {
-  doc: null, selected: null, layers: null,
+  doc: null, file: null, selected: null, layers: null,
   activeLayer: 'overlay', linked: false, selectedCell: null, dirty: false, saveStatus: null,
   editingSource: false,
 };

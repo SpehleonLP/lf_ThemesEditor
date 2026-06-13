@@ -62,6 +62,11 @@ describe('rc/spline', () => {
     expect(got[1]).toBeCloseTo(cubicRef(0, 0, -4, 2, 0.5), 10);
   });
 
+  it('returns zeros for empty marks instead of crashing', () => {
+    expect(sampleSpline([], 1, 0.5, false)).toEqual([0]);
+    expect(sampleSpline([], 2, 0.5, true)).toEqual([0, 0]);
+  });
+
   it('durationOf is the last knot time', () => {
     expect(durationOf([[0, 0], [1.5, 9]] as Mark1[])).toBe(1.5);
   });
